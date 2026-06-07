@@ -3,12 +3,9 @@ from typing import Optional
 import datetime
 import decimal
 import enum
-
-from sqlalchemy import Column, DECIMAL, DateTime, Enum, ForeignKeyConstraint, Index, Integer, String, Text, text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-class Base(DeclarativeBase):
-    pass
+from app.database.database import Base
+from sqlalchemy import Column, DECIMAL, DateTime, Enum, ForeignKeyConstraint, Index, Integer, String, UniqueConstraint, Text, text
+from sqlalchemy.orm import  Mapped, mapped_column, relationship
 
 
 class AvaliacoesConceito(str, enum.Enum):
@@ -104,7 +101,11 @@ class Alunos(Base):
 
     projetos_como_integrante: Mapped[list['Projetos']] = relationship('Projetos', secondary='projeto_integrantes', back_populates='integrantes')
     contatos_empresa: Mapped[list['ContatosEmpresa']] = relationship('ContatosEmpresa', back_populates='aluno')
-    portfolios: Mapped[list['Portfolios']] = relationship('Portfolios', back_populates='aluno')
+    portfolio: Mapped[Optional['Portfolios']] = relationship(
+    'Portfolios',
+    back_populates='aluno',
+    uselist=False
+)
     projetos_criados: Mapped[list['Projetos']] = relationship('Projetos', back_populates='aluno_responsavel')
     certificados: Mapped[list['Certificados']] = relationship('Certificados', back_populates='aluno')
 
@@ -124,7 +125,10 @@ class Portfolios(Base):
     github_url: Mapped[Optional[str]] = mapped_column(String(255))
     habilidades: Mapped[Optional[str]] = mapped_column(String(255))
 
-    aluno: Mapped['Alunos'] = relationship('Alunos', back_populates='portfolios')
+    aluno: Mapped['Alunos'] = relationship(
+    'Alunos',
+    back_populates='portfolio'
+)
 
 
 class ContatosEmpresa(Base):
@@ -222,11 +226,16 @@ class VersoesProjeto(Base):
 class Avaliacoes(Base):
     __tablename__ = 'avaliacoes'
     __table_args__ = (
-        ForeignKeyConstraint(['professor_id'], ['professores.id'], ondelete='RESTRICT'),
-        ForeignKeyConstraint(['projeto_id'], ['projetos.id'], ondelete='CASCADE'),
-        Index('projeto_id', 'projeto_id'),
-        Index('professor_id', 'professor_id')
+    ForeignKeyConstraint(['professor_id'], ['professores.id'], ondelete='RESTRICT'),
+    ForeignKeyConstraint(['projeto_id'], ['projetos.id'], ondelete='CASCADE'),
+    Index('projeto_id', 'projeto_id'),
+    Index('professor_id', 'professor_id'),
+    UniqueConstraint(
+        'projeto_id',
+        'professor_id',
+        name='uq_avaliacao_professor_projeto'
     )
+)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     projeto_id: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -249,7 +258,12 @@ class Certificados(Base):
             ForeignKeyConstraint(['aluno_id'], ['alunos.id'], ondelete='CASCADE'),
             ForeignKeyConstraint(['projeto_id'], ['projetos.id'], ondelete='CASCADE'),
             Index('aluno_id', 'aluno_id'),
-            Index('projeto_id', 'projeto_id')
+            Index('projeto_id', 'projeto_id'),
+            UniqueConstraint(
+                'projeto_id',
+                'aluno_id',
+                name='uq_certificado_aluno_projeto'
+            )
         )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
