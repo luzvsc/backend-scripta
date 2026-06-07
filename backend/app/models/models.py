@@ -49,6 +49,9 @@ class Coordenadores(Base):
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     senha: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    logs: Mapped[list["LogsSistema"]] = relationship(
+        back_populates="coordenador"
+    )
 
 class Empresas(Base):
     __tablename__ = 'empresas'
@@ -274,4 +277,53 @@ class Certificados(Base):
 
     aluno: Mapped['Alunos'] = relationship('Alunos', back_populates='certificados')
     projeto: Mapped['Projetos'] = relationship('Projetos', back_populates='certificados')
-    
+
+class LogsSistema(Base):
+    __tablename__ = 'logs_sistema'
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['coordenador_id'],
+            ['coordenadores.id'],
+            ondelete='RESTRICT'
+        ),
+        Index('coordenador_id', 'coordenador_id'),
+    )
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    coordenador_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    entidade: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    acao: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False
+    )
+
+    registro_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    detalhes: Mapped[Optional[str]] = mapped_column(
+        Text
+    )
+
+    data_hora: Mapped[datetime.datetime] = mapped_column(
+        DateTime,
+        server_default=text("CURRENT_TIMESTAMP")
+    )
+    coordenador: Mapped["Coordenadores"] = relationship(
+    back_populates="logs"
+)
