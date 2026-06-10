@@ -1,37 +1,19 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
 import os
+import pymysql
+from dotenv import load_dotenv
 
-# Carrega variáveis do arquivo .env
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DB_HOST = os.environ["DATABASE_HOST"]
+DB_USER = os.environ["DATABASE_USER"]
+DB_PASSWORD = os.environ["DATABASE_PASSWORD"]
+DB_NAME = os.environ["DATABASE_NAME"]
 
-if DATABASE_URL is None:
-    raise ValueError("DATABASE_URL não encontrada no arquivo .env")
-
-# Engine do banco
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True
-)
-
-# Sessões do banco
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-# Classe base para os models
-Base = declarative_base()
-
-
-# Dependência para FastAPI
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_connection():
+    return pymysql.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        cursorclass=pymysql.cursors.DictCursor
+    )

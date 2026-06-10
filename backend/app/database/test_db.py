@@ -1,25 +1,25 @@
-import sys
-import os
+from app.database.database import get_connection
 
-# Garante que o Python encontre a pasta 'app'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+try:
+    print("🔄 Testando conexão com o MySQL...")
 
-from app.database.database import SessionLocal
-from app.models.models import Alunos
+    conn = get_connection()
+    cursor = conn.cursor()
 
-def testar_conexao_e_modelos():
-    print("🔄 Iniciando teste de conexão e modelos...")
-    session = SessionLocal()
-    try:
-        # Tenta fazer uma consulta simples na tabela de alunos
-        quantidade_alunos = session.query(Alunos).count()
-        print("✅ Sucesso! O FastAPI conseguiu ler os modelos e acessar o MySQL.")
-        print(f"📊 Quantidade de alunos cadastrados no banco: {quantidade_alunos}")
-    except Exception as error:
-        print("❌ Erro encontrado! Algo deu errado na conexão ou nos modelos:")
-        print(error)
-    finally:
-        session.close()
+    cursor.execute("SELECT COUNT(*) AS total FROM alunos")
 
-if __name__ == "__main__":
-    testar_conexao_e_modelos()
+    resultado = cursor.fetchone()
+
+    if resultado is not None:
+        print("✅ Conexão realizada com sucesso!")
+        print(f"📊 Quantidade de alunos cadastrados: {resultado['total']}")
+    else:
+        print("⚠️ Nenhum resultado retornado.")
+
+except Exception as e:
+    print(f"❌ Erro ao conectar ao banco: {e}")
+
+finally:
+    if 'conn' in locals():
+        conn.close()
+        print("🔒 Conexão encerrada.")
