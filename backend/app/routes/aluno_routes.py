@@ -1,13 +1,14 @@
 from fastapi import APIRouter, status, HTTPException
 from typing import List
-from app.models.aluno import (AlunoCreate,
-AlunoCreateResponse,
-AlunoResponse,
-AlunoUpdate,
-AlunoLogin,
-LoginResponse,
-TokenResponse)
+from app.models.aluno import (
+    AlunoCreate,
+    AlunoCreateResponse,
+    AlunoResponse,
+    AlunoUpdate,
+    AlunoLogin
+)
 import app.services.aluno_service as aluno_service
+from app.models.auth import TokenResponse
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
 
@@ -76,7 +77,4 @@ def login_aluno(login: AlunoLogin):
         }
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

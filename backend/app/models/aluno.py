@@ -43,14 +43,3 @@ class AlunoUpdate(BaseModel):
 class AlunoCreateResponse(BaseModel):
     message: str
     id: int
-
-
-class LoginResponse(BaseModel):
-    message: str
-    id: int
-    nome: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
