@@ -38,3 +38,8 @@ class AlunoUpdate(BaseModel):
     linkedin_url: Optional[str] = None
     github_url: Optional[str] = None
     competencias: Optional[str] = None
+
+
+class AlunoCreateResponse(BaseModel):
+    message: str
+    id: int
