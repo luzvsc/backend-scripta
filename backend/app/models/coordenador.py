@@ -5,13 +5,11 @@ from typing import Optional
 class CoordenadorBase(BaseModel):
     nome: str = Field(..., min_length=3, max_length=150)
     email: EmailStr
-    departamento: Optional[str] = None
 
 
 
 class CoordenadorResponse(CoordenadorBase):
     id: int
-    ativo: Optional[bool] = True
 
 
 class CoordenadorLogin(BaseModel):
@@ -22,11 +20,4 @@ class CoordenadorLogin(BaseModel):
 class CoordenadorUpdate(BaseModel):
     nome: Optional[str] = None
     email: Optional[EmailStr] = None
-    departamento: Optional[str] = None
-
-
-class CoordenadorCreateResponse(BaseModel):
-    message: str
-    id: int
-
 

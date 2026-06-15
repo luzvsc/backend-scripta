@@ -1,8 +1,6 @@
 from fastapi import APIRouter, status, HTTPException
 from typing import List
 from app.models.coordenador import (
-    CoordenadorCreate,
-    CoordenadorCreateResponse,
     CoordenadorResponse,
     CoordenadorUpdate,
     CoordenadorLogin,
