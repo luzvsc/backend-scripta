@@ -8,16 +8,6 @@ class CoordenadorBase(BaseModel):
     departamento: Optional[str] = None
 
 
-class CoordenadorCreate(CoordenadorBase):
-    senha: str = Field(..., min_length=6)
-    confirmar_senha: str
-
-    @model_validator(mode='after')
-    def verificar_senhas(self) -> 'CoordenadorCreate':
-        if self.senha != self.confirmar_senha:
-            raise ValueError('A senha e a confirmação da senha não coincidem')
-        return self
-
 
 class CoordenadorResponse(CoordenadorBase):
     id: int
@@ -40,6 +30,3 @@ class CoordenadorCreateResponse(BaseModel):
     id: int
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str

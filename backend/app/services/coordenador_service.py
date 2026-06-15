@@ -32,12 +32,6 @@ def listar_coordenadores() -> list[dict]:
     return coordenadores
 
 
-def deletar_coordenador(id_coordenador: int) -> bool:
-    deleted = coordenador_repository.deletar_coordenador(id_coordenador)
-    if not deleted:
-        raise ValueError("Coordenador não encontrado")
-    return True
-
 
 def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate) -> bool:
     coordenador_existente = coordenador_repository.buscar_por_id(id_coordenador)

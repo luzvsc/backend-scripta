@@ -34,25 +34,6 @@ def buscar_por_id(id_coordenador: int) -> Optional[dict[str, Any]]:
             conn.close()
 
 
-def criar_coordenador(nome: str, email: str, senha: str, departamento: Optional[str] = None) -> int:
-    conn = None
-    cursor = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO coordenadores (nome, email, senha, departamento) VALUES (%s, %s, %s, %s)",
-            (nome, email, senha, departamento)
-        )
-        conn.commit()
-        id_coordenador = cursor.lastrowid
-        return id_coordenador
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
 
 def listar_coordenadores() -> list[dict[str, Any]]:
     conn = None
@@ -98,19 +79,3 @@ def atualizar_coordenador(id_coordenador: int, dados: dict) -> bool:
         if conn:
             conn.close()
 
-
-def deletar_coordenador(id_coordenador: int) -> bool:
-    conn = None
-    cursor = None
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM coordenadores WHERE id = %s", (id_coordenador,))
-        conn.commit()
-        coordenador_deletado = cursor.rowcount > 0
-        return coordenador_deletado
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()

@@ -6,23 +6,12 @@ from app.models.coordenador import (
     CoordenadorResponse,
     CoordenadorUpdate,
     CoordenadorLogin,
-    TokenResponse
-)
+)   
+from app.models.auth import TokenResponse
 import app.services.coordenador_service as coordenador_service
 
 router = APIRouter(prefix="/coordenadores", tags=["Coordenadores"])
 
-
-@router.post("/", response_model=CoordenadorCreateResponse, responses={409: {"description": "Coordenador já cadastrado"}}, status_code=status.HTTP_201_CREATED)
-def cadastrar_coordenador(coordenador: CoordenadorCreate):
-    try:
-        id_coordenador = coordenador_service.cadastrar_coordenador(coordenador)
-        return {
-            "message": "Coordenador cadastrado com sucesso",
-            "id": id_coordenador
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 @router.get("/", response_model=List[CoordenadorResponse], status_code=status.HTTP_200_OK)
@@ -54,15 +43,6 @@ def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.delete("/{id_coordenador}", status_code=status.HTTP_200_OK, responses={404: {"description": "Coordenador não encontrado"}})
-def deletar_coordenador(id_coordenador: int):
-    try:
-        coordenador_service.deletar_coordenador(id_coordenador)
-        return {
-            "message": "Coordenador removido com sucesso"
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/login", response_model=TokenResponse, responses={401: {"description": "Email ou senha inválidos"}}, status_code=status.HTTP_200_OK)
