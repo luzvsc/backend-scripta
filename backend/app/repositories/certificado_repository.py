@@ -102,7 +102,24 @@ def certificado_ja_existe(id_projeto: int, id_aluno: int) -> bool:
         if conn:
             conn.close()
 
+def buscar_integrantes_do_projeto(projeto_id: int) -> list[dict[str, Any]]:
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM projeto_integrantes WHERE projeto_id = %s",
+            (projeto_id,)
+        )
+        return list(cursor.fetchall())
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
+            
 def criar_certificado(id_projeto: int, id_aluno: int) -> int:
     conn = None
     cursor = None
