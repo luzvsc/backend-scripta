@@ -7,7 +7,7 @@ from app.models.projeto import (
 import app.repositories.projeto_repository as projeto_repository
 import app.repositories.aluno_repository as aluno_repository
 import app.repositories.professor_repository as professor_repository
-
+import app.repositories.projeto_integrante_repository as integrante_repository
 
 def cadastrar_projeto(projeto: ProjetoCreate) -> int:
 
@@ -33,18 +33,24 @@ def cadastrar_projeto(projeto: ProjetoCreate) -> int:
 
     if projeto_existente:
         raise ValueError("Já existe um projeto com este título nesta turma e semestre")
+    
+    id_projeto = projeto_repository.criar_projeto(
+    titulo=projeto.titulo,
+    descricao=projeto.descricao,
+    curso=projeto.curso,
+    turma=projeto.turma,
+    semestre=projeto.semestre,
+    area_conhecimento=projeto.area_conhecimento,
+    aluno_responsavel_id=projeto.aluno_responsavel_id,
+    professor_orientador_id=projeto.professor_orientador_id
+)
 
-    return projeto_repository.criar_projeto(
-        titulo=projeto.titulo,
-        descricao=projeto.descricao,
-        curso=projeto.curso,
-        turma=projeto.turma,
-        semestre=projeto.semestre,
-        area_conhecimento=projeto.area_conhecimento,
-        aluno_responsavel_id=projeto.aluno_responsavel_id,
-        professor_orientador_id=projeto.professor_orientador_id
+    integrante_repository.adicionar_integrante(
+        projeto_id=id_projeto,
+        aluno_id=projeto.aluno_responsavel_id
     )
 
+    return id_projeto
 
 def buscar_projeto_por_id(id_projeto: int) -> dict:
 

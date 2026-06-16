@@ -7,6 +7,7 @@ from app.routes import projeto_routes
 from app.routes import portfolio_routes
 from app.routes import contato_empresa_routes
 from app.routes import projeto_integrante_routes
+from app.routes import certificado_routes
 
 app = FastAPI()
 
@@ -18,6 +19,7 @@ app.include_router(projeto_routes.router)
 app.include_router(portfolio_routes.router)
 app.include_router(contato_empresa_routes.router)
 app.include_router(projeto_integrante_routes.router)
+app.include_router(certificado_routes.router)
 
 
 @app.get("/")

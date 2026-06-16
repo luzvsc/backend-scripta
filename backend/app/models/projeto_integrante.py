@@ -7,6 +7,7 @@ class ProjetoIntegranteCreate(BaseModel):
 class ProjetoIntegranteResponse(BaseModel):
     projeto_id: int
     aluno_id: int
+    nome: str
 
 class ProjetoIntegranteCreateResponse(BaseModel):
     message: str

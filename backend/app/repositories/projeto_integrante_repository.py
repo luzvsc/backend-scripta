@@ -28,7 +28,19 @@ def listar_integrantes(projeto_id: int) -> list[dict[str, Any]]:
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM projeto_integrantes WHERE projeto_id = %s", (projeto_id,))
+        cursor.execute(
+            """
+            SELECT
+                pi.projeto_id,
+                a.id AS aluno_id,
+                a.nome
+            FROM projeto_integrantes pi
+            JOIN alunos a
+                ON pi.aluno_id = a.id
+            WHERE pi.projeto_id = %s
+            """,
+            (projeto_id,)
+        )
         integrantes = list(cursor.fetchall())
         return integrantes
     finally:
