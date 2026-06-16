@@ -11,6 +11,7 @@ app.include_router(professor_routes.router)
 app.include_router(empresa_routes.router)
 app.include_router(coordenador_routes.router)
 
+
 @app.get("/")
 def home():
     return {"message": "Scripta API funcionando"}
