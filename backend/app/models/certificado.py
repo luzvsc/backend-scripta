@@ -1,28 +1,27 @@
 from pydantic import BaseModel
-from typing import Optional
-from datetime import date
+from datetime import datetime
 
 
 class CertificadoBase(BaseModel):
-    id_projeto: int
-    id_aluno: int
+    projeto_id: int
+    aluno_id: int
 
 
-class CertificadoResponse(BaseModel):
+class CertificadoResponse(CertificadoBase):
     id: int
-    id_projeto: int
-    id_aluno: int
-    nome_aluno: Optional[str] = None
-    titulo_projeto: Optional[str] = None
-    curso: Optional[str] = None
-    semestre: Optional[str] = None
-    nome_professor: Optional[str] = None
-    data_emissao: Optional[date] = None
-    codigo_verificacao: Optional[str] = None
+
+    nome_aluno: str
+    titulo_projeto: str
+    curso: str
+    semestre: str
+    nome_professor: str
+
+    data_emissao: datetime
+    codigo_autenticidade: str
 
 
 class CertificadoEmitirRequest(BaseModel):
-    id_projeto: int
+    projeto_id: int
 
 
 class CertificadoCreateResponse(BaseModel):

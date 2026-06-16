@@ -15,9 +15,9 @@ def buscar_por_id(id_certificado: int) -> Optional[dict[str, Any]]:
                    p.titulo AS titulo_projeto, p.semestre,
                    pr.nome AS nome_professor
             FROM certificados c
-            JOIN alunos a ON c.id_aluno = a.id
-            JOIN projetos p ON c.id_projeto = p.id
-            LEFT JOIN professores pr ON p.id_professor = pr.id
+            JOIN alunos a ON c.aluno_id = a.id
+            JOIN projetos p ON c.projeto_id = p.id
+            LEFT JOIN professores pr ON p.professor_orientador_id = pr.id
             WHERE c.id = %s
             """,
             (id_certificado,)
@@ -42,10 +42,10 @@ def buscar_por_aluno(id_aluno: int) -> list[dict[str, Any]]:
                    p.titulo AS titulo_projeto, p.semestre,
                    pr.nome AS nome_professor
             FROM certificados c
-            JOIN alunos a ON c.id_aluno = a.id
-            JOIN projetos p ON c.id_projeto = p.id
-            LEFT JOIN professores pr ON p.id_professor = pr.id
-            WHERE c.id_aluno = %s
+            JOIN alunos a ON c.aluno_id = a.id
+            JOIN projetos p ON c.projeto_id = p.id
+            LEFT JOIN professores pr ON p.professor_orientador_id = pr.id
+            WHERE c.aluno_id = %s
             ORDER BY c.data_emissao DESC
             """,
             (id_aluno,)
@@ -70,10 +70,10 @@ def buscar_por_projeto(id_projeto: int) -> list[dict[str, Any]]:
                    p.titulo AS titulo_projeto, p.semestre,
                    pr.nome AS nome_professor
             FROM certificados c
-            JOIN alunos a ON c.id_aluno = a.id
-            JOIN projetos p ON c.id_projeto = p.id
-            LEFT JOIN professores pr ON p.id_professor = pr.id
-            WHERE c.id_projeto = %s
+            JOIN alunos a ON c.aluno_id = a.id
+            JOIN projetos p ON c.projeto_id = p.id
+            LEFT JOIN professores pr ON p.professor_orientador_id = pr.id
+            WHERE c.projeto_id = %s
             """,
             (id_projeto,)
         )
@@ -92,7 +92,12 @@ def certificado_ja_existe(id_projeto: int, id_aluno: int) -> bool:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id FROM certificados WHERE id_projeto = %s AND id_aluno = %s",
+             """
+            SELECT id
+            FROM certificados
+            WHERE projeto_id = %s
+            AND aluno_id = %s
+            """,
             (id_projeto, id_aluno)
         )
         return cursor.fetchone() is not None
@@ -109,7 +114,16 @@ def buscar_integrantes_do_projeto(projeto_id: int) -> list[dict[str, Any]]:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT * FROM projeto_integrantes WHERE projeto_id = %s",
+            """
+                SELECT
+                pi.projeto_id,
+                pi.aluno_id,
+                a.nome
+            FROM projeto_integrantes pi
+            JOIN alunos a
+                ON pi.aluno_id = a.id
+            WHERE pi.projeto_id = %s
+            """,
             (projeto_id,)
         )
         return list(cursor.fetchall())
@@ -120,19 +134,29 @@ def buscar_integrantes_do_projeto(projeto_id: int) -> list[dict[str, Any]]:
             conn.close()
 
             
-def criar_certificado(id_projeto: int, id_aluno: int) -> int:
+def criar_certificado(projeto_id: int, aluno_id: int) -> int:
     conn = None
     cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        codigo_verificacao = str(uuid.uuid4()).replace("-", "").upper()[:16]
+        codigo = str(uuid.uuid4()).replace("-", "").upper()[:16]
         cursor.execute(
             """
-            INSERT INTO certificados (id_projeto, id_aluno, data_emissao, codigo_verificacao)
-            VALUES (%s, %s, CURDATE(), %s)
+            INSERT INTO certificados
+            (
+                projeto_id,
+                aluno_id,
+                codigo_autenticidade
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s
+            )
             """,
-            (id_projeto, id_aluno, codigo_verificacao)
+            (projeto_id, aluno_id, codigo)
         )
         conn.commit()
         return cursor.lastrowid
@@ -155,9 +179,9 @@ def listar_certificados() -> list[dict[str, Any]]:
                    p.titulo AS titulo_projeto, p.semestre,
                    pr.nome AS nome_professor
             FROM certificados c
-            JOIN alunos a ON c.id_aluno = a.id
-            JOIN projetos p ON c.id_projeto = p.id
-            LEFT JOIN professores pr ON p.id_professor = pr.id
+            JOIN alunos a ON c.aluno_id = a.id
+            JOIN projetos p ON c.projeto_id = p.id
+            LEFT JOIN professores pr ON p.professor_orientador_id = pr.id
             ORDER BY c.data_emissao DESC
             """
         )

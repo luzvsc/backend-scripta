@@ -26,7 +26,7 @@ def emitir_certificados(payload: CertificadoEmitirRequest):
     O projeto deve estar com status 'Aprovado' antes de chamar este endpoint.
     """
     try:
-        ids = certificado_service.emitir_certificados_por_projeto(payload.id_projeto)
+        ids = certificado_service.emitir_certificados_por_projeto(payload.projeto_id)
         return {
             "message": "Certificados emitidos com sucesso",
             "ids_certificados": ids,

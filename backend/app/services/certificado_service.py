@@ -1,35 +1,51 @@
 import app.repositories.certificado_repository as certificado_repository
+import app.services.projeto_service as projeto_service
 
 
-def emitir_certificados_por_projeto(id_projeto: int) -> list[int]:
-    """
-    Emite certificados individuais para todos os integrantes de um projeto aprovado.
-    Chamado pela coordenação após validação do projeto.
-    Regras:
-      - RN01: O projeto deve estar aprovado (validado externamente antes de chamar).
-      - RN02: Cada integrante recebe um certificado individual.
-      - RN04: Um certificado só existe vinculado a um projeto aprovado.
-    """
-    integrantes = certificado_repository.buscar_integrantes_do_projeto(id_projeto)
+def emitir_certificados_por_projeto(projeto_id: int) -> list[int]:
+
+    projeto = projeto_service.buscar_projeto_por_id(projeto_id)
+
+    if projeto["status"] != "aprovado":
+        raise ValueError(
+            "Certificados só podem ser emitidos para projetos aprovados"
+        )
+
+    integrantes = (
+        certificado_repository
+        .buscar_integrantes_do_projeto(projeto_id)
+    )
+
     if not integrantes:
-        raise ValueError("Nenhum integrante encontrado para este projeto")
+        raise ValueError(
+            "Nenhum integrante encontrado para este projeto"
+        )
 
     ids_gerados = []
-    for integrante in integrantes:
-        id_aluno = integrante["id_aluno"]
 
-        ja_existe = certificado_repository.certificado_ja_existe(id_projeto, id_aluno)
-        if ja_existe:
+    for integrante in integrantes:
+
+        aluno_id = integrante["aluno_id"]
+
+        if certificado_repository.certificado_ja_existe(
+            projeto_id,
+            aluno_id
+        ):
             continue
 
-        id_certificado = certificado_repository.criar_certificado(
-            id_projeto=id_projeto,
-            id_aluno=id_aluno
+        id_certificado = (
+            certificado_repository.criar_certificado(
+                projeto_id,
+                aluno_id
+            )
         )
+
         ids_gerados.append(id_certificado)
 
     if not ids_gerados:
-        raise ValueError("Todos os integrantes já possuem certificado para este projeto")
+        raise ValueError(
+            "Todos os integrantes já possuem certificado"
+        )
 
     return ids_gerados
 
