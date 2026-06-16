@@ -1,7 +1,11 @@
 from app.models.coordenador import CoordenadorUpdate, CoordenadorLogin
+from app.models.projeto import ProjetoStatusUpdate
 import app.repositories.coordenador_repository as coordenador_repository
 from app.core.security import verificar_senha
 from app.core.jwt_handler import criar_access_token
+import app.services.projeto_service as projeto_service
+import app.services.certificado_service as certificado_service
+import app.services.log_sistema_service as log_sistema_service
 
 
 def buscar_coordenador_por_id(id_coordenador: int) -> dict:
@@ -51,3 +55,20 @@ def login_coordenador(login: CoordenadorLogin) -> str:
     )
 
     return token
+
+def aprovar_projeto(coordenador_id: int, id_projeto: int) -> bool:
+
+    status_update = ProjetoStatusUpdate(status="aprovado")
+    projeto_service.atualizar_status_projeto(id_projeto, status_update)
+
+    certificado_service.emitir_certificados_por_projeto(id_projeto)
+
+    log_sistema_service.registrar_acao(
+        coordenador_id=coordenador_id,
+        acao="UPDATE",
+        entidade="projetos",
+        registro_id=id_projeto,
+        detalhes="Projeto aprovado e certificados emitidos automaticamente"
+    )
+
+    return True
