@@ -5,16 +5,15 @@ from datetime import datetime
 
 class LogSistemaResponse(BaseModel):
     id: int
-    id_coordenador: int
-    nome_coordenador: Optional[str] = None
-    acao: str
+    coordenador_id: int
     entidade: str
-    id_entidade: Optional[int] = None
-    descricao: Optional[str] = None
+    acao: str
+    registro_id: int
+    detalhes: Optional[str] = None
     data_hora: Optional[datetime] = None
 
 
 class LogSistemaFiltro(BaseModel):
-    id_coordenador: Optional[int] = None
+    coordenador_id: Optional[int] = None
     entidade: Optional[str] = None
     acao: Optional[str] = None

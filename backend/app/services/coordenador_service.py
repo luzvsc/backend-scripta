@@ -5,7 +5,7 @@ from app.core.security import verificar_senha
 from app.core.jwt_handler import criar_access_token
 import app.services.projeto_service as projeto_service
 import app.services.certificado_service as certificado_service
-import app.services.log_sistema_service as log_sistema_service
+import app.services.logs_sistema_service as logs_sistema_service
 
 
 def buscar_coordenador_por_id(id_coordenador: int) -> dict:
@@ -63,7 +63,7 @@ def aprovar_projeto(coordenador_id: int, id_projeto: int) -> bool:
 
     certificado_service.emitir_certificados_por_projeto(id_projeto)
 
-    log_sistema_service.registrar_acao(
+    logs_sistema_service.registrar_acao(
         coordenador_id=coordenador_id,
         acao="UPDATE",
         entidade="projetos",

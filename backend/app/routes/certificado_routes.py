@@ -51,17 +51,6 @@ def listar_todos_certificados():
     return certificado_service.listar_todos_certificados()
 
 
-@router.get(
-    "/{id_certificado}",
-    response_model=CertificadoResponse,
-    responses={404: {"description": "Certificado não encontrado"}},
-)
-def buscar_certificado_por_id(id_certificado: int):
-    try:
-        return certificado_service.buscar_certificado_por_id(id_certificado)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
 
 @router.get(
     "/aluno/{id_aluno}",
@@ -88,3 +77,15 @@ def listar_certificados_do_projeto(id_projeto: int):
     Uso da coordenação (RF-ADM-11).
     """
     return certificado_service.listar_certificados_do_projeto(id_projeto)
+
+
+@router.get(
+    "/{id_certificado}",
+    response_model=CertificadoResponse,
+    responses={404: {"description": "Certificado não encontrado"}},
+)
+def buscar_certificado_por_id(id_certificado: int):
+    try:
+        return certificado_service.buscar_certificado_por_id(id_certificado)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
