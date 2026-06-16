@@ -56,3 +56,15 @@ def login_coordenador(login: CoordenadorLogin):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
+
+@router.patch("/{coordenador_id}/projetos/{id_projeto}/aprovar", status_code=status.HTTP_200_OK, responses={404: {"description": "Projeto não encontrado"}, 400: {"description": "Transição de status inválida"}})
+def aprovar_projeto(coordenador_id: int, id_projeto: int):
+    try:
+        coordenador_service.aprovar_projeto(coordenador_id, id_projeto)
+        return {
+            "message": "Projeto aprovado e certificados emitidos com sucesso"
+        }
+    except ValueError as e:
+        if "não encontrado" in str(e):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
