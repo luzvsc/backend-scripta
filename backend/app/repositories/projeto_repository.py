@@ -160,3 +160,20 @@ def buscar_por_titulo_turma_semestre(titulo: str, turma: str, semestre: str) -> 
             cursor.close()
         if conn:
             conn.close()
+
+
+def atualizar_status_projeto(projeto_id: int, status: str) -> bool:
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE projetos SET status = %s WHERE id = %s", (status, projeto_id))
+        conn.commit()
+        projeto_atualizado = cursor.rowcount > 0
+        return projeto_atualizado
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
