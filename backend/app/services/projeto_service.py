@@ -3,24 +3,21 @@ from app.models.projeto import (
     ProjetoUpdate,
     ProjetoStatusUpdate
 )
-
 import app.repositories.projeto_repository as projeto_repository
 import app.repositories.aluno_repository as aluno_repository
 import app.repositories.professor_repository as professor_repository
 import app.repositories.projeto_integrante_repository as integrante_repository
+from app.services import versao_projeto_service
+from app.models.versao_projeto import VersaoProjetoCreate
 
 def cadastrar_projeto(projeto: ProjetoCreate) -> int:
 
-    aluno = aluno_repository.buscar_por_id(
-        projeto.aluno_responsavel_id
-    )
+    aluno = aluno_repository.buscar_por_id(projeto.aluno_responsavel_id)
 
     if not aluno:
         raise ValueError("Aluno responsável não encontrado")
 
-    professor = professor_repository.buscar_por_id(
-        projeto.professor_orientador_id
-    )
+    professor = professor_repository.buscar_por_id(projeto.professor_orientador_id)
 
     if not professor:
         raise ValueError("Professor orientador não encontrado")
@@ -67,10 +64,7 @@ def listar_projetos() -> list[dict]:
     return projeto_repository.listar_projetos()
 
 
-def atualizar_projeto(
-    id_projeto: int,
-    projeto: ProjetoUpdate
-) -> bool:
+def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
 
     projeto_existente = projeto_repository.buscar_por_id(
         id_projeto
@@ -127,6 +121,14 @@ def atualizar_projeto(
         raise ValueError(
             "Já existe um projeto com este título nesta turma e semestre"
         )
+    
+    versao_projeto_service.criar_versao(
+    VersaoProjetoCreate(
+        projeto_id=id_projeto,
+        quem_alterou_tipo="aluno",
+        quem_alterou_id=0
+        )
+    )
 
     return projeto_repository.atualizar_projeto(
         id_projeto,
