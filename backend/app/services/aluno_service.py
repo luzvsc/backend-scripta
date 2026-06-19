@@ -2,6 +2,7 @@ from app.models.aluno import AlunoCreate, AlunoUpdate, AlunoLogin
 import app.repositories.aluno_repository as aluno_repository
 from app.core.security import gerar_hash, verificar_senha
 from app.core.jwt_handler import criar_access_token
+import app.services.logs_sistema_service as logs_sistema_service
 
 
 def cadastrar_aluno(aluno: AlunoCreate):
@@ -41,6 +42,16 @@ def deletar_aluno(id_aluno: int) -> bool:
     deleted = aluno_repository.deletar_aluno(id_aluno)
     if not deleted:
         raise ValueError("Aluno não encontrado")
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="DELETE",
+        entidade="alunos",
+        registro_id=id_aluno,
+        detalhes="Aluno removido"
+    )
+ 
     return True
 
 
@@ -53,7 +64,18 @@ def atualizar_aluno(id_aluno: int, aluno: AlunoUpdate) -> bool:
     if not dados:
         raise ValueError("Nenhum dado informado para atualização")
     
-    return aluno_repository.atualizar_aluno(id_aluno, dados)
+    resultado = aluno_repository.atualizar_aluno(id_aluno, dados)
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="UPDATE",
+        entidade="alunos",
+        registro_id=id_aluno,
+        detalhes="Aluno atualizado"
+    )
+ 
+    return resultado
 
 
 def login_aluno(login: AlunoLogin) -> str:

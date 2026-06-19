@@ -9,6 +9,7 @@ import app.repositories.professor_repository as professor_repository
 import app.repositories.projeto_integrante_repository as integrante_repository
 from app.services import versao_projeto_service
 from app.models.versao_projeto import VersaoProjetoCreate
+import app.services.logs_sistema_service as logs_sistema_service
 
 def cadastrar_projeto(projeto: ProjetoCreate) -> int:
 
@@ -65,16 +66,16 @@ def listar_projetos() -> list[dict]:
 
 
 def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
-
+ 
     projeto_existente = projeto_repository.buscar_por_id(
         id_projeto
     )
-
+ 
     if not projeto_existente:
         raise ValueError("Projeto não encontrado")
     
     status_atual = projeto_existente["status"]
-
+ 
     if status_atual in (
         "em_avaliacao",
         "aprovado",
@@ -83,9 +84,9 @@ def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
         raise ValueError(
             "Este projeto não pode mais ser editado"
         )
-
+ 
     dados = projeto.model_dump(exclude_unset=True)
-
+ 
     if not dados:
         raise ValueError(
             "Nenhum dado informado para atualização"
@@ -95,17 +96,17 @@ def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
         "titulo",
         projeto_existente["titulo"]
     )
-
+ 
     turma = dados.get(
         "turma",
         projeto_existente["turma"]
     )
-
+ 
     semestre = dados.get(
         "semestre",
         projeto_existente["semestre"]
     )
-
+ 
     projeto_duplicado = (
         projeto_repository.buscar_por_titulo_turma_semestre(
             titulo,
@@ -113,7 +114,7 @@ def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
             semestre
         )
     )
-
+ 
     if (
         projeto_duplicado
         and projeto_duplicado["id"] != id_projeto
@@ -129,11 +130,22 @@ def atualizar_projeto(id_projeto: int, projeto: ProjetoUpdate) -> bool:
         quem_alterou_id=0
         )
     )
-
-    return projeto_repository.atualizar_projeto(
+ 
+    resultado = projeto_repository.atualizar_projeto(
         id_projeto,
         dados
     )
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="UPDATE",
+        entidade="projetos",
+        registro_id=id_projeto,
+        detalhes="Projeto atualizado"
+    )
+ 
+    return resultado
 
 
 def atualizar_status_projeto(id_projeto: int, status_update: ProjetoStatusUpdate) -> bool:
@@ -169,13 +181,13 @@ def atualizar_status_projeto(id_projeto: int, status_update: ProjetoStatusUpdate
 
 
 def deletar_projeto(id_projeto: int) -> bool:
-
+ 
    projeto = projeto_repository.buscar_por_id(id_projeto)
    if not projeto:
        raise ValueError("Projeto não encontrado")
    
    status_atual = projeto["status"]
-
+ 
    if status_atual in (
     "em_avaliacao",
     "aprovado",
@@ -184,5 +196,14 @@ def deletar_projeto(id_projeto: int) -> bool:
     raise ValueError("Este projeto não pode ser removido")
    
    projeto_repository.deletar_projeto(id_projeto)
-   
+ 
+   # TODO: substituir coordenador_id=1 quando a autenticação existir
+   logs_sistema_service.registrar_acao(
+       coordenador_id=1,
+       acao="DELETE",
+       entidade="projetos",
+       registro_id=id_projeto,
+       detalhes="Projeto removido"
+   )
+ 
    return True

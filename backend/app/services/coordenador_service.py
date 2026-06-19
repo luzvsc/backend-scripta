@@ -25,13 +25,23 @@ def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate) -
     coordenador_existente = coordenador_repository.buscar_por_id(id_coordenador)
     if not coordenador_existente:
         raise ValueError("Coordenador não encontrado")
-
+ 
     dados = coordenador.model_dump(exclude_unset=True)
     if not dados:
         raise ValueError("Nenhum dado informado para atualização")
-
-    return coordenador_repository.atualizar_coordenador(id_coordenador, dados)
-
+ 
+    resultado = coordenador_repository.atualizar_coordenador(id_coordenador, dados)
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="UPDATE",
+        entidade="coordenadores",
+        registro_id=id_coordenador,
+        detalhes="Coordenador atualizado"
+    )
+ 
+    return resultado
 
 def login_coordenador(login: CoordenadorLogin) -> str:
     coordenador = coordenador_repository.buscar_por_email(login.email)

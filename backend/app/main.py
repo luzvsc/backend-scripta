@@ -8,7 +8,6 @@ from app.routes import portfolio_routes
 from app.routes import contato_empresa_routes
 from app.routes import projeto_integrante_routes
 from app.routes import certificado_routes
-from app.routes import logs_sistema_routes
 from app.routes import avaliacao_routes
 from app.routes import arquivo_projeto_routes
 from app.routes import versao_projeto_routes
@@ -24,7 +23,6 @@ app.include_router(portfolio_routes.router)
 app.include_router(contato_empresa_routes.router)
 app.include_router(projeto_integrante_routes.router)
 app.include_router(certificado_routes.router)
-app.include_router(logs_sistema_routes.router)
 app.include_router(avaliacao_routes.router)
 app.include_router(arquivo_projeto_routes.router)
 app.include_router(versao_projeto_routes.router)

@@ -2,6 +2,7 @@ from app.models.empresa import EmpresaCreate, EmpresaUpdate, EmpresaLogin
 import app.repositories.empresa_repository as empresa_repository
 from app.core.security import gerar_hash, verificar_senha
 from app.core.jwt_handler import criar_access_token
+import app.services.logs_sistema_service as logs_sistema_service
 
 
 def cadastrar_empresa(empresa: EmpresaCreate):
@@ -38,13 +39,6 @@ def listar_empresas() -> list[dict]:
     return empresas
 
 
-def deletar_empresa(id_empresa: int) -> bool:
-    deleted = empresa_repository.deletar_empresa(id_empresa)
-    if not deleted:
-        raise ValueError("Empresa não encontrada")
-    return True
-
-
 def atualizar_empresa(id_empresa: int, empresa: EmpresaUpdate) -> bool:
     empresa_existente = empresa_repository.buscar_por_id(id_empresa)
     if not empresa_existente:
@@ -54,7 +48,19 @@ def atualizar_empresa(id_empresa: int, empresa: EmpresaUpdate) -> bool:
     if not dados:
         raise ValueError("Nenhum dado informado para atualização")
     
-    return empresa_repository.atualizar_empresa(id_empresa, dados)
+    resultado = empresa_repository.atualizar_empresa(id_empresa, dados)
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="UPDATE",
+        entidade="empresas",
+        registro_id=id_empresa,
+        detalhes="Empresa atualizada"
+    )
+ 
+    return resultado
+
 
 
 def login_empresa(login: EmpresaLogin) -> str:

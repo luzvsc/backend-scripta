@@ -2,6 +2,7 @@ from app.models.professor import ProfessorCreate, ProfessorUpdate, ProfessorLogi
 import app.repositories.professor_repository as professor_repository
 from app.core.security import gerar_hash, verificar_senha
 from app.core.jwt_handler import criar_access_token
+import app.services.logs_sistema_service as logs_sistema_service
 
 
 def cadastrar_professor(professor: ProfessorCreate):
@@ -41,6 +42,16 @@ def deletar_professor(id_professor: int) -> bool:
     deleted = professor_repository.deletar_professor(id_professor)
     if not deleted:
         raise ValueError("Professor não encontrado")
+ 
+    # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="DELETE",
+        entidade="professores",
+        registro_id=id_professor,
+        detalhes="Professor removido"
+    )
+ 
     return True
 
 
@@ -48,12 +59,23 @@ def atualizar_professor(id_professor: int, professor: ProfessorUpdate) -> bool:
     professor_existente = professor_repository.buscar_por_id(id_professor)
     if not professor_existente:
         raise ValueError("Professor não encontrado")
-
+ 
     dados = professor.model_dump(exclude_unset=True)
     if not dados:
         raise ValueError("Nenhum dado informado para atualização")
     
-    return professor_repository.atualizar_professor(id_professor, dados)
+    resultado = professor_repository.atualizar_professor(id_professor, dados)
+
+     # TODO: substituir coordenador_id=1 quando a autenticação existir
+    logs_sistema_service.registrar_acao(
+        coordenador_id=1,
+        acao="UPDATE",
+        entidade="professores",
+        registro_id=id_professor,
+        detalhes="Professor atualizado"
+    )
+
+    return resultado
 
 
 def login_professor(login: ProfessorLogin) -> str:
