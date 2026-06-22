@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 
 from app.models.projeto import (
@@ -11,6 +11,9 @@ from app.models.projeto import (
 )
 
 import app.services.projeto_service as projeto_service
+from app.core.auth_core import obter_usuario_logado, exigir_aluno, exigir_coordenador
+from app.models.auth import UsuarioAutenticado
+
 
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
@@ -21,9 +24,19 @@ router = APIRouter(prefix="/projetos", tags=["Projetos"])
     response_model=ProjetoCreateResponse,
     status_code=status.HTTP_201_CREATED
 )
-def cadastrar_projeto(projeto: ProjetoCreate):
+def cadastrar_projeto(
+    projeto: ProjetoCreate,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )):
+
+    exigir_aluno(usuario)
+
     try:
-        id_projeto = projeto_service.cadastrar_projeto(projeto)
+        id_projeto = projeto_service.cadastrar_projeto(
+            projeto=projeto,
+            aluno_responsavel_id=usuario.id
+            )
 
         return {
             "message": "Projeto cadastrado com sucesso",
@@ -66,20 +79,22 @@ def buscar_projeto_por_id(id_projeto: int):
         )
 
 
-@router.put(
-    "/{id_projeto}",
-    responses={
-        404: {"description": "Projeto não encontrado"}
-    }
-)
+@router.put("/{id_projeto}", responses={404: {"description": "Projeto não encontrado"}})
 def atualizar_projeto(
     id_projeto: int,
-    projeto: ProjetoUpdate
+    projeto: ProjetoUpdate,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
 ):
+    exigir_aluno(usuario)
+
     try:
         projeto_service.atualizar_projeto(
-            id_projeto,
-            projeto
+            id_projeto=id_projeto,
+            projeto=projeto,
+            quem_alterou_id=usuario.id,
+            quem_alterou_tipo="aluno"
         )
 
         return {
@@ -87,47 +102,93 @@ def atualizar_projeto(
         }
 
     except ValueError as e:
+        mensagem = str(e)
 
-        if str(e) == "Projeto não encontrado":
+        if mensagem == "Projeto não encontrado":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=str(e)
+                detail=mensagem
             )
+        
+        if mensagem == "Você não faz parte deste projeto":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=mensagem
+                )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=mensagem
         )
 
 
 @router.patch("/{id_projeto}/status", responses={404: {"description": "Projeto não encontrado"}})
-def atualizar_status_projeto(id_projeto: int, status_update: ProjetoStatusUpdate):
+def atualizar_status_projeto(
+    id_projeto: int,
+    status_update: ProjetoStatusUpdate,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )):
+    novo_status = status_update.status
+    if novo_status == "submetido":
+        exigir_aluno(usuario)
+    elif novo_status in (
+        "aprovado",
+        "reprovado"
+    ):
+        exigir_coordenador(usuario)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas alunos e coordenadores podem alterar status"
+        )
+    
     try:
-        projeto_service.atualizar_status_projeto(id_projeto, status_update)
+        projeto_service.atualizar_status_projeto(
+            id_projeto=id_projeto,
+            status_update=status_update,
+            usuario_id=usuario.id,
+            usuario_perfil=usuario.perfil
+        )
 
         return {
             "message": "Status atualizado com sucesso"
         }
 
     except ValueError as e:
-        if str(e) == "Projeto não encontrado":
+        mensagem = str(e)
+
+        if mensagem == "Projeto não encontrado":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=str(e)
+                detail=mensagem
             )
+        
+        if mensagem == "Você não faz parte deste projeto":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=mensagem
+                )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=mensagem
         )
 
 
 @router.delete("/{id_projeto}", status_code=status.HTTP_200_OK, responses={404: {"description": "Projeto não encontrado"}})
-def deletar_projeto(id_projeto: int):
+def deletar_projeto(
+    id_projeto: int,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
+):
+    exigir_coordenador(usuario)
     
     try:
         projeto_service.deletar_projeto(
-            id_projeto
+            id_projeto=id_projeto,
+            coordenador_id=usuario.id
         )
 
         return {
@@ -135,7 +196,15 @@ def deletar_projeto(id_projeto: int):
         }
 
     except ValueError as e:
+        mensagem = str(e)
+
+        if mensagem == "Projeto nao encontrado":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=mensagem
+            )
+        
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=mensagem
         )

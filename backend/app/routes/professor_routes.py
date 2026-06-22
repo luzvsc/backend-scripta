@@ -4,10 +4,8 @@ from app.models.professor import (
     ProfessorCreate,
     ProfessorCreateResponse,
     ProfessorResponse,
-    ProfessorUpdate,
-    ProfessorLogin
+    ProfessorUpdate
 )
-from app.models.auth import TokenResponse
 import app.services.professor_service as professor_service
 
 
@@ -63,18 +61,4 @@ def atualizar_professor(id_professor: int, professor: ProfessorUpdate):
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK, responses={401: {"description": "Email ou senha inválidos"}})
-def login_professor(login: ProfessorLogin):
-    try:
-        token = professor_service.login_professor(login)
-
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
-
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

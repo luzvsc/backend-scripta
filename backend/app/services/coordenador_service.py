@@ -1,8 +1,6 @@
-from app.models.coordenador import CoordenadorUpdate, CoordenadorLogin
+from app.models.coordenador import CoordenadorUpdate
 from app.models.projeto import ProjetoStatusUpdate
 import app.repositories.coordenador_repository as coordenador_repository
-from app.core.security import verificar_senha
-from app.core.jwt_handler import criar_access_token
 import app.services.projeto_service as projeto_service
 import app.services.certificado_service as certificado_service
 import app.services.logs_sistema_service as logs_sistema_service
@@ -42,30 +40,6 @@ def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate) -
     )
  
     return resultado
-
-def login_coordenador(login: CoordenadorLogin) -> str:
-    coordenador = coordenador_repository.buscar_por_email(login.email)
-
-    if not coordenador:
-        raise ValueError("Email ou senha inválidos")
-
-    senha_valida = verificar_senha(
-        login.senha,
-        coordenador["senha"]
-    )
-
-    if not senha_valida:
-        raise ValueError("Email ou senha inválidos")
-
-    token = criar_access_token(
-        {
-            "sub": str(coordenador["id"]),
-            "tipo": "coordenador"
-        }
-    )
-
-    return token
-
 def aprovar_projeto(coordenador_id: int, id_projeto: int) -> bool:
 
     status_update = ProjetoStatusUpdate(status="aprovado")

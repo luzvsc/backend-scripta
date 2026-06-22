@@ -1,7 +1,6 @@
-from app.models.professor import ProfessorCreate, ProfessorUpdate, ProfessorLogin
+from app.models.professor import ProfessorCreate, ProfessorUpdate
 import app.repositories.professor_repository as professor_repository
-from app.core.security import gerar_hash, verificar_senha
-from app.core.jwt_handler import criar_access_token
+from app.core.security import gerar_hash
 import app.services.logs_sistema_service as logs_sistema_service
 
 
@@ -75,28 +74,4 @@ def atualizar_professor(id_professor: int, professor: ProfessorUpdate) -> bool:
         detalhes="Professor atualizado"
     )
 
-    return resultado
-
-
-def login_professor(login: ProfessorLogin) -> str:
-    professor = professor_repository.buscar_por_email(login.email)
-
-    if not professor:
-        raise ValueError("Email ou senha inválidos")
-    
-    senha_valida = verificar_senha(
-        login.senha,
-        professor["senha"]
-    )
-
-    if not senha_valida:
-        raise ValueError("Email ou senha inválidos")
-
-    token = criar_access_token(
-        {
-            "sub": str(professor["id"]),
-            "tipo": "professor"
-        }
-    )
-
-    return token
+    return resultado

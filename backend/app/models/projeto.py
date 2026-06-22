@@ -11,7 +11,6 @@ class ProjetoBase(BaseModel):
 
 
 class ProjetoCreate(ProjetoBase):
-    aluno_responsavel_id: int
     professor_orientador_id: int
 
 

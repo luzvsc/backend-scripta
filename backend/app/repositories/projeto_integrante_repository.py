@@ -48,3 +48,36 @@ def listar_integrantes(projeto_id: int) -> list[dict[str, Any]]:
             cursor.close()
         if conn:
             conn.close()
+
+
+def buscar_por_projeto_e_aluno(
+        projeto_id: int,
+        aluno_id: int
+) -> dict | None:
+    
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT 
+            projeto_id,
+            aluno_id
+            FROM projeto_integrantes
+            WHERE projeto_id = %s
+            AND aluno_id = %s
+            """,
+            (projeto_id, aluno_id)
+        )
+
+        return cursor.fetchone()
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

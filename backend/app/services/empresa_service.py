@@ -1,7 +1,6 @@
-from app.models.empresa import EmpresaCreate, EmpresaUpdate, EmpresaLogin
+from app.models.empresa import EmpresaCreate, EmpresaUpdate
 import app.repositories.empresa_repository as empresa_repository
-from app.core.security import gerar_hash, verificar_senha
-from app.core.jwt_handler import criar_access_token
+from app.core.security import gerar_hash
 import app.services.logs_sistema_service as logs_sistema_service
 
 
@@ -60,28 +59,3 @@ def atualizar_empresa(id_empresa: int, empresa: EmpresaUpdate) -> bool:
     )
  
     return resultado
-
-
-
-def login_empresa(login: EmpresaLogin) -> str:
-    empresa = empresa_repository.buscar_por_email(login.email_contato)
-
-    if not empresa:
-        raise ValueError("Email ou senha inválidos")
-    
-    senha_valida = verificar_senha(
-        login.senha,
-        empresa["senha"]
-    )
-
-    if not senha_valida:
-        raise ValueError("Email ou senha inválidos")
-
-    token = criar_access_token(
-        {
-            "sub": str(empresa["id"]),
-            "tipo": "empresa"
-        }
-    )
-
-    return token

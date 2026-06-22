@@ -4,11 +4,9 @@ from app.models.aluno import (
     AlunoCreate,
     AlunoCreateResponse,
     AlunoResponse,
-    AlunoUpdate,
-    AlunoLogin
+    AlunoUpdate
 )
 import app.services.aluno_service as aluno_service
-from app.models.auth import TokenResponse
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
 
@@ -63,18 +61,4 @@ def atualizar_aluno(id_aluno: int, aluno: AlunoUpdate):
         if str(e) == "Aluno não encontrado":
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
-
-
-@router.post("/login", response_model=TokenResponse,responses={401: {"description": "Email ou senha inválidos"}}, status_code=status.HTTP_200_OK)
-def login_aluno(login: AlunoLogin):
-    try:
-        token = aluno_service.login_aluno(login)
-
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
-
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))

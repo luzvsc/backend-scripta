@@ -1,7 +1,6 @@
-from app.models.aluno import AlunoCreate, AlunoUpdate, AlunoLogin
+from app.models.aluno import AlunoCreate, AlunoUpdate
 import app.repositories.aluno_repository as aluno_repository
-from app.core.security import gerar_hash, verificar_senha
-from app.core.jwt_handler import criar_access_token
+from app.core.security import gerar_hash
 import app.services.logs_sistema_service as logs_sistema_service
 
 
@@ -75,28 +74,4 @@ def atualizar_aluno(id_aluno: int, aluno: AlunoUpdate) -> bool:
         detalhes="Aluno atualizado"
     )
  
-    return resultado
-
-
-def login_aluno(login: AlunoLogin) -> str:
-    aluno = aluno_repository.buscar_por_email(login.email)
-
-    if not aluno:
-        raise ValueError("Email ou senha inválidos")
-    
-    senha_valida = verificar_senha(
-        login.senha,
-        aluno["senha"]
-    )
-
-    if not senha_valida:
-        raise ValueError("Email ou senha inválidos")
-
-    token = criar_access_token(
-        {
-            "sub": str(aluno["id"]),
-            "tipo": "aluno"
-        }
-    )
-
-    return token
+    return resultado
