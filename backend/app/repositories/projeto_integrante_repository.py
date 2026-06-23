@@ -1,5 +1,6 @@
 from app.database.database import get_connection
 from typing import Any
+from pymysql.err import IntegrityError
 
 def adicionar_integrante(projeto_id: int, aluno_id: int) -> bool:
     conn = None
@@ -12,10 +13,14 @@ def adicionar_integrante(projeto_id: int, aluno_id: int) -> bool:
             (projeto_id, aluno_id)
         )
         conn.commit()
-        return True
-    except Exception as e:
-        # Pega a exceção se der erro de UNIQUE ou FK (ex: aluno já no projeto)
+        return cursor.rowcount > 0
+    
+    except IntegrityError:
+        if conn:
+            conn.rollback()
+
         return False
+
     finally:
         if cursor:
             cursor.close()
@@ -41,8 +46,10 @@ def listar_integrantes(projeto_id: int) -> list[dict[str, Any]]:
             """,
             (projeto_id,)
         )
+
         integrantes = list(cursor.fetchall())
         return integrantes
+    
     finally:
         if cursor:
             cursor.close()
@@ -50,10 +57,7 @@ def listar_integrantes(projeto_id: int) -> list[dict[str, Any]]:
             conn.close()
 
 
-def buscar_por_projeto_e_aluno(
-        projeto_id: int,
-        aluno_id: int
-) -> dict | None:
+def buscar_por_projeto_e_aluno(projeto_id: int, aluno_id: int) -> dict | None:
     
     conn = None
     cursor = None
@@ -79,5 +83,38 @@ def buscar_por_projeto_e_aluno(
     finally:
         if cursor:
             cursor.close()
+        if conn:
+            conn.close()
+
+
+def remover_integrante(projeto_id: int, aluno_id: int) -> bool:
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            DELETE FROM projeto_integrantes
+            WHERE projeto_id = %s
+              AND aluno_id = %s
+            """,
+            (
+                projeto_id,
+                aluno_id
+            )
+        )
+
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        if cursor:
+            cursor.close()
+
         if conn:
             conn.close()

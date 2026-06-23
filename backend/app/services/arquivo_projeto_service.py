@@ -1,24 +1,57 @@
-from app.models.arquivo_projeto import ArquivoProjetoCreate
-from app.repositories import arquivo_projeto_repository as repository
-from app.services import projeto_service
+from app.models.arquivo_projeto import (ArquivoProjetoCreate)
+from app.models.auth import UsuarioAutenticado
+from app.models.versao_projeto import (VersaoProjetoCreate)
+from app.repositories import (arquivo_projeto_repository as repository)
+import app.repositories.projeto_repository as projeto_repository
+import app.repositories.projeto_integrante_repository as integrante_repository
 from app.services import versao_projeto_service
-from app.models.versao_projeto import VersaoProjetoCreate
+import app.services.logs_sistema_service as logs_sistema_service
 
 
-def criar_arquivo(arquivo: ArquivoProjetoCreate) -> int:
+LIMITE_ARQUIVO_MB = 50
 
-    projeto = projeto_service.buscar_projeto_por_id(arquivo.projeto_id)
 
-    status = projeto["status"]
+def criar_arquivo(arquivo: ArquivoProjetoCreate, aluno_id: int) -> int:
 
-    if status not in ["rascunho", "submetido"]:
+    projeto = projeto_repository.buscar_por_id(arquivo.projeto_id)
+
+    if not projeto:
         raise ValueError(
-            "Não é permitido alterar arquivos de projetos em avaliação, aprovados ou reprovados"
+            "Projeto não encontrado"
+        )
+
+    integrante = (
+        integrante_repository.buscar_por_projeto_e_aluno(
+            arquivo.projeto_id,
+            aluno_id
+        )
+    )
+
+    if not integrante:
+        raise ValueError(
+            "Você não faz parte deste projeto"
+        )
+
+    status_projeto = projeto["status"]
+
+    if status_projeto not in (
+        "rascunho",
+        "submetido"
+    ):
+        raise ValueError(
+            "Não é permitido adicionar arquivos "
+            "a projetos em avaliação, aprovados "
+            "ou reprovados"
         )
 
     if arquivo.tamanho_mb <= 0:
         raise ValueError(
             "Tamanho do arquivo inválido"
+        )
+
+    if arquivo.tamanho_mb > LIMITE_ARQUIVO_MB:
+        raise ValueError(
+            "O arquivo não pode ultrapassar 50 MB"
         )
 
     arquivo_id = repository.criar_arquivo(
@@ -28,26 +61,41 @@ def criar_arquivo(arquivo: ArquivoProjetoCreate) -> int:
         tamanho_mb=arquivo.tamanho_mb
     )
 
-    versao_projeto_service.criar_versao(
-    VersaoProjetoCreate(
-        projeto_id=arquivo.projeto_id,
-        quem_alterou_tipo="aluno",
-        quem_alterou_id=0
+    if status_projeto == "submetido":
+        versao_projeto_service.criar_versao(
+            VersaoProjetoCreate(
+                projeto_id=arquivo.projeto_id,
+                quem_alterou_tipo="aluno",
+                quem_alterou_id=aluno_id
+            )
         )
-    )
 
     return arquivo_id
 
 
-def buscar_arquivo_por_id(id_arquivo: int) -> dict:
+def buscar_arquivo_por_id(id_arquivo: int, usuario: UsuarioAutenticado) -> dict:
 
     arquivo = repository.buscar_por_id(id_arquivo)
 
     if not arquivo:
         raise ValueError(
-        "Arquivo não encontrado"
+            "Arquivo não encontrado"
+        )
+
+    permitido = (
+        projeto_repository.pode_visualizar_projeto(
+            arquivo["projeto_id"],
+            usuario.id,
+            usuario.perfil
+        )
     )
-    
+
+    if not permitido:
+        raise ValueError(
+            "Você não tem permissão para "
+            "visualizar este arquivo"
+        )
+
     return arquivo
 
 
@@ -56,54 +104,91 @@ def listar_arquivos() -> list[dict]:
     return repository.listar_arquivos()
 
 
-def listar_por_projeto(projeto_id: int) -> list[dict]:
+def listar_por_projeto(projeto_id: int, usuario: UsuarioAutenticado) -> list[dict]:
 
-    projeto_service.buscar_projeto_por_id(projeto_id)
+    projeto = projeto_repository.buscar_por_id(projeto_id)
+
+    if not projeto:
+        raise ValueError(
+            "Projeto não encontrado"
+        )
+
+    permitido = (
+        projeto_repository.pode_visualizar_projeto(
+            projeto_id,
+            usuario.id,
+            usuario.perfil
+        )
+    )
+
+    if not permitido:
+        raise ValueError(
+            "Você não tem permissão para "
+            "visualizar os arquivos deste projeto"
+        )
 
     return repository.listar_por_projeto(projeto_id)
 
 
-def buscar_ultimo_arquivo(projeto_id: int) -> dict:
+def buscar_ultimo_arquivo(projeto_id: int, usuario: UsuarioAutenticado) -> dict:
 
-    projeto_service.buscar_projeto_por_id(projeto_id)
+    projeto = projeto_repository.buscar_por_id(projeto_id)
+
+    if not projeto:
+        raise ValueError(
+            "Projeto não encontrado"
+        )
+
+    permitido = (
+        projeto_repository.pode_visualizar_projeto(
+            projeto_id,
+            usuario.id,
+            usuario.perfil
+        )
+    )
+
+    if not permitido:
+        raise ValueError(
+            "Você não tem permissão para "
+            "visualizar os arquivos deste projeto"
+        )
 
     arquivo = repository.buscar_ultima_versao(projeto_id)
 
     if not arquivo:
         raise ValueError(
-        "Nenhum arquivo encontrado para este projeto"
+            "Nenhum arquivo encontrado para este projeto"
         )
 
     return arquivo
 
 
-def deletar_arquivo(id_arquivo: int) -> bool:
+def deletar_arquivo(id_arquivo: int, coordenador_id: int) -> bool:
 
     arquivo = repository.buscar_por_id(id_arquivo)
 
     if not arquivo:
         raise ValueError(
-        "Arquivo não encontrado"
-    )
+            "Arquivo não encontrado"
+        )
 
-    projeto = projeto_service.buscar_projeto_por_id(
-    arquivo["projeto_id"]
-)
-    
-    if projeto["status"] not in [
-    "rascunho",
-    "submetido"
-]:
+    resultado = repository.deletar_arquivo(id_arquivo)
+
+    if not resultado:
         raise ValueError(
-        "Arquivos não podem ser removidos após o início da avaliação"
+            "Não foi possível remover o arquivo"
         )
-    
-    versao_projeto_service.criar_versao(
-    VersaoProjetoCreate(
-        projeto_id=arquivo["projeto_id"],
-        quem_alterou_tipo="aluno",
-        quem_alterou_id=0
+
+    logs_sistema_service.registrar_acao(
+        coordenador_id=coordenador_id,
+        acao="DELETE",
+        entidade="arquivos_projeto",
+        registro_id=id_arquivo,
+        detalhes=(
+            f"Arquivo '{arquivo['nome_original']}' "
+            f"removido do projeto "
+            f"{arquivo['projeto_id']}"
         )
     )
 
-    return repository.deletar_arquivo(id_arquivo)
+    return True

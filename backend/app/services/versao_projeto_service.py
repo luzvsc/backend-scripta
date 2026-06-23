@@ -1,11 +1,16 @@
 from app.models.versao_projeto import VersaoProjetoCreate
 from app.repositories import versao_projeto_repository as repository
-from app.services import projeto_service
+import app.repositories.projeto_repository as projeto_repository
 
 
 def criar_versao(versao: VersaoProjetoCreate) -> int:
 
-    projeto = projeto_service.buscar_projeto_por_id(versao.projeto_id)
+    projeto = projeto_repository.buscar_por_id(versao.projeto_id)
+
+    if not projeto:
+        raise ValueError( 
+            "Projeto não encontrado" 
+        )
 
     versao_id = repository.criar_versao(
         projeto_id=versao.projeto_id,
@@ -37,6 +42,11 @@ def listar_versoes() -> list[dict]:
 
 def listar_por_projeto(projeto_id: int) -> list[dict]:
 
-    projeto_service.buscar_projeto_por_id(projeto_id)
+    projeto = projeto_repository.buscar_por_id(projeto_id)
+
+    if not projeto:
+        raise ValueError(
+            "Projeto não encontrado"
+        )
 
     return repository.listar_por_projeto(projeto_id)
