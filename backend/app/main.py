@@ -12,6 +12,8 @@ from app.routes import avaliacao_routes
 from app.routes import arquivo_projeto_routes
 from app.routes import versao_projeto_routes
 from app.routes import relatorios_routes
+from app.routes import auth_routes
+
 app = FastAPI()
 
 app.include_router(aluno_routes.router)
@@ -27,6 +29,7 @@ app.include_router(avaliacao_routes.router)
 app.include_router(arquivo_projeto_routes.router)
 app.include_router(versao_projeto_routes.router)
 app.include_router(relatorios_routes.router)
+app.include_router(auth_routes.router)
 
 @app.get("/")
 def home():

@@ -3,9 +3,7 @@ from typing import List
 from app.models.coordenador import (
     CoordenadorResponse,
     CoordenadorUpdate,
-    CoordenadorLogin,
 )   
-from app.models.auth import TokenResponse
 import app.services.coordenador_service as coordenador_service
 
 router = APIRouter(prefix="/coordenadores", tags=["Coordenadores"])
@@ -40,22 +38,6 @@ def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate):
 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-
-
-
-@router.post("/login", response_model=TokenResponse, responses={401: {"description": "Email ou senha inválidos"}}, status_code=status.HTTP_200_OK)
-def login_coordenador(login: CoordenadorLogin):
-    try:
-        token = coordenador_service.login_coordenador(login)
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
 
 @router.patch("/{coordenador_id}/projetos/{id_projeto}/aprovar", status_code=status.HTTP_200_OK, responses={404: {"description": "Projeto não encontrado"}, 400: {"description": "Transição de status inválida"}})
 def aprovar_projeto(coordenador_id: int, id_projeto: int):
