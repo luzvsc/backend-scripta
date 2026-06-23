@@ -1,5 +1,4 @@
 from app.database.database import get_connection
-from typing import Optional, Any
 
 
 def buscar_por_id(id_avaliacao: int) -> dict | None:
@@ -192,5 +191,88 @@ def atualizar_avaliacao(id_avaliacao: int, dados: dict) -> bool:
     finally:
         if cursor:
             cursor.close()
+        if conn:
+            conn.close()
+
+
+def existe_avaliacao_completa(projeto_id: int) -> bool:
+    
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM avaliacoes
+                WHERE projeto_id = %s
+                AND nota_inovacao IS NOT NULL
+                AND nota_tecnica IS NOT NULL
+                AND nota_aplicabilidade IS NOT NULL
+                AND nota_clareza IS NOT NULL
+                AND media_geral IS NOT NULL
+                AND conceito IS NOT NULL
+            ) AS existe
+            """,
+            (projeto_id,)
+        )
+
+        resultado = cursor.fetchone()
+
+        return bool(
+            resultado
+            and resultado["existe"]
+        )
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+
+def listar_por_professor(professor_id: int) -> list[dict]:
+    
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                a.id,
+                a.projeto_id,
+                a.professor_id,
+                a.media_geral,
+                a.conceito,
+                p.titulo AS projeto_titulo,
+                prof.nome AS professor_nome
+            FROM avaliacoes a
+            JOIN projetos p
+                ON a.projeto_id = p.id
+            JOIN professores prof
+                ON a.professor_id = prof.id
+            WHERE a.professor_id = %s
+            ORDER BY a.data_avaliacao DESC
+            """,
+            (professor_id,)
+        )
+
+        return list(
+            cursor.fetchall()
+        )
+
+    finally:
+        if cursor:
+            cursor.close()
+
         if conn:
             conn.close()

@@ -177,3 +177,216 @@ def atualizar_status_projeto(projeto_id: int, status: str) -> bool:
             cursor.close()
         if conn:
             conn.close()
+
+
+def listar_projetos_por_perfil(usuario_id: int, perfil: str) -> list[dict]:
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        if perfil == "coordenador":
+            cursor.execute(
+                """
+                SELECT
+                    p.*,
+                    a.nome AS aluno_responsavel,
+                    prof.nome AS professor_orientador
+                FROM projetos p
+                JOIN alunos a
+                    ON p.aluno_responsavel_id = a.id
+                JOIN professores prof
+                    ON p.professor_orientador_id = prof.id
+                ORDER BY p.id DESC
+                """
+            )
+
+        elif perfil == "professor":
+            cursor.execute(
+                """
+                SELECT
+                    p.*,
+                    a.nome AS aluno_responsavel,
+                    prof.nome AS professor_orientador
+                FROM projetos p
+                JOIN alunos a
+                    ON p.aluno_responsavel_id = a.id
+                JOIN professores prof
+                    ON p.professor_orientador_id = prof.id
+                WHERE p.status IN (
+                    'submetido',
+                    'em_avaliacao',
+                    'aprovado',
+                    'reprovado'
+                )
+                ORDER BY p.id DESC
+                """
+            )
+
+        elif perfil == "empresa":
+            cursor.execute(
+                """
+                SELECT
+                    p.*,
+                    a.nome AS aluno_responsavel,
+                    prof.nome AS professor_orientador
+                FROM projetos p
+                JOIN alunos a
+                    ON p.aluno_responsavel_id = a.id
+                JOIN professores prof
+                    ON p.professor_orientador_id = prof.id
+                WHERE p.status = 'aprovado'
+                  AND p.visibilidade = 'publico'
+                ORDER BY p.id DESC
+                """
+            )
+
+        elif perfil == "aluno":
+            cursor.execute(
+                """
+                SELECT DISTINCT
+                    p.*,
+                    a.nome AS aluno_responsavel,
+                    prof.nome AS professor_orientador
+                FROM projetos p
+                JOIN alunos a
+                    ON p.aluno_responsavel_id = a.id
+                JOIN professores prof
+                    ON p.professor_orientador_id = prof.id
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM projeto_integrantes pi
+                    WHERE pi.projeto_id = p.id
+                      AND pi.aluno_id = %s
+                )
+                OR (
+                    p.status = 'aprovado'
+                    AND p.visibilidade IN (
+                        'publico',
+                        'apenas_senac'
+                    )
+                )
+                ORDER BY p.id DESC
+                """,
+                (usuario_id,)
+            )
+
+        else:
+            return []
+
+        return list(cursor.fetchall())
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+
+def pode_visualizar_projeto(
+    projeto_id: int,
+    usuario_id: int,
+    perfil: str
+) -> bool:
+    
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        if perfil == "coordenador":
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM projetos
+                    WHERE id = %s
+                ) AS permitido
+                """,
+                (projeto_id,)
+            )
+
+        elif perfil == "professor":
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM projetos
+                    WHERE id = %s
+                      AND status IN (
+                          'submetido',
+                          'em_avaliacao',
+                          'aprovado',
+                          'reprovado'
+                      )
+                ) AS permitido
+                """,
+                (projeto_id,)
+            )
+
+        elif perfil == "empresa":
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM projetos
+                    WHERE id = %s
+                      AND status = 'aprovado'
+                      AND visibilidade = 'publico'
+                ) AS permitido
+                """,
+                (projeto_id,)
+            )
+
+        elif perfil == "aluno":
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM projetos p
+                    WHERE p.id = %s
+                      AND (
+                          EXISTS (
+                              SELECT 1
+                              FROM projeto_integrantes pi
+                              WHERE pi.projeto_id = p.id
+                                AND pi.aluno_id = %s
+                          )
+                          OR (
+                              p.status = 'aprovado'
+                              AND p.visibilidade IN (
+                                  'publico',
+                                  'apenas_senac'
+                              )
+                          )
+                      )
+                ) AS permitido
+                """,
+                (
+                    projeto_id,
+                    usuario_id
+                )
+            )
+
+        else:
+            return False
+
+        resultado = cursor.fetchone()
+
+        return bool(
+            resultado
+            and resultado["permitido"]
+        )
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()

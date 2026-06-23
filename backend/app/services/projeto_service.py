@@ -3,10 +3,12 @@ from app.models.projeto import (
     ProjetoUpdate,
     ProjetoStatusUpdate
 )
+from app.models.auth import UsuarioAutenticado
 import app.repositories.projeto_repository as projeto_repository
 import app.repositories.aluno_repository as aluno_repository
 import app.repositories.professor_repository as professor_repository
 import app.repositories.projeto_integrante_repository as integrante_repository
+import app.repositories.avaliacao_repository as avaliacao_repository
 from app.services import versao_projeto_service
 from app.models.versao_projeto import VersaoProjetoCreate
 import app.services.logs_sistema_service as logs_sistema_service
@@ -73,19 +75,35 @@ def cadastrar_projeto(
     return id_projeto
 
 
-def buscar_projeto_por_id(id_projeto: int) -> dict:
+def buscar_projeto_por_id(id_projeto: int, usuario: UsuarioAutenticado) -> dict:
 
     projeto = projeto_repository.buscar_por_id(id_projeto)
 
     if not projeto:
-        raise ValueError("Projeto não encontrado")
+        raise ValueError(
+            "Projeto não encontrado"
+        )
+
+    permitido = projeto_repository.pode_visualizar_projeto(
+        projeto_id=id_projeto,
+        usuario_id=usuario.id,
+        perfil=usuario.perfil
+    )
+
+    if not permitido:
+        raise ValueError(
+            "Você não tem permissão para visualizar este projeto"
+        )
 
     return projeto
 
 
-def listar_projetos() -> list[dict]:
+def listar_projetos(usuario: UsuarioAutenticado) -> list[dict]:
 
-    return projeto_repository.listar_projetos()
+    return projeto_repository.listar_projetos_por_perfil(
+        usuario_id=usuario.id,
+        perfil=usuario.perfil
+    )
 
 
 def atualizar_projeto(
@@ -167,13 +185,14 @@ def atualizar_projeto(
             "nesta turma e semestre"
         )
 
-    versao_projeto_service.criar_versao(
-        VersaoProjetoCreate(
-            projeto_id=id_projeto,
-            quem_alterou_tipo=quem_alterou_tipo,
-            quem_alterou_id=quem_alterou_id
+    if status_atual == "submetido":
+        versao_projeto_service.criar_versao(
+            VersaoProjetoCreate(
+                projeto_id=id_projeto,
+                quem_alterou_tipo=quem_alterou_tipo,
+                quem_alterou_id=quem_alterou_id
+            )
         )
-    )
 
     return projeto_repository.atualizar_projeto(
         id_projeto,
@@ -183,13 +202,13 @@ def atualizar_projeto(
 
 
 def atualizar_status_projeto(
-    id_projeto: int,
-    status_update: ProjetoStatusUpdate,
-    usuario_id: int | None = None,
-    usuario_perfil: PerfilAutenticado | None = None
+id_projeto: int,
+status_update: ProjetoStatusUpdate,
+usuario_id: int | None = None,
+usuario_perfil: PerfilAutenticado | None = None
 ) -> bool:
     projeto = projeto_repository.buscar_por_id(
-        id_projeto
+    id_projeto
     )
 
     if not projeto:
@@ -265,6 +284,18 @@ def atualizar_status_projeto(
         if usuario_id is None:
             raise ValueError(
                 "Coordenador autenticado não identificado"
+            )
+
+        avaliacao_completa = (
+            avaliacao_repository.existe_avaliacao_completa(
+                id_projeto
+            )
+        )
+
+        if not avaliacao_completa:
+            raise ValueError(
+                "O projeto precisa receber uma avaliação "
+                "completa antes da validação"
             )
 
         coordenador_id = usuario_id

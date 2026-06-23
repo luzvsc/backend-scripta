@@ -54,7 +54,7 @@ def exigir_coordenador(usuario: UsuarioAutenticado) -> None:
         )
 
 
-def exigir_perfis(usuario: UsuarioAutenticado, perfis_permitidos: list[str]) -> None:
+def exigir_perfis(usuario: UsuarioAutenticado, perfis_permitidos: list[PerfilUsuario]) -> None:
 
     if usuario.perfil not in perfis_permitidos:
         raise HTTPException(
