@@ -15,11 +15,12 @@ from app.routes import versao_projeto_routes
 from app.routes import relatorios_routes
 from app.routes import auth_routes
 
+
 app = FastAPI()
 
-# Configuração de CORS (Permite que o Frontend no React/Vite acesse o Backend)
+
 origins = [
-    "http://localhost:5173",  # Porta padrão do Vite
+    "http://localhost:5173", 
     "http://127.0.0.1:5173",
 ]
 
@@ -27,9 +28,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+        ],
+    allow_headers=["Authorization", "Content-Type"]
 )
+
 
 app.include_router(aluno_routes.router)
 app.include_router(professor_routes.router)
