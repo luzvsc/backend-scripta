@@ -1,25 +1,33 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from enum import Enum
+from pydantic import BaseModel
+
 
 class VisibilidadeEnum(str, Enum):
-    publico = 'publico'
-    apenas_senac = 'apenas_senac'
-    privado = 'privado'
+    publico = "publico"
+    apenas_senac = "apenas_senac"
+    privado = "privado"
 
-class PortfolioBase(BaseModel):
-    aluno_id: int
+
+class PortfolioCreate(BaseModel):
     projeto_id: int
     visibilidade: VisibilidadeEnum = VisibilidadeEnum.privado
 
-class PortfolioCreate(PortfolioBase):
-    pass
 
 class PortfolioUpdate(BaseModel):
     visibilidade: VisibilidadeEnum
 
-class PortfolioResponse(PortfolioBase):
+
+class PortfolioResponse(BaseModel):
     id: int
+    aluno_id: int
+    projeto_id: int
+    visibilidade: VisibilidadeEnum
+
+    nome_aluno: str
+    titulo_projeto: str
+    curso: str
+    semestre: str
+
 
 class PortfolioCreateResponse(BaseModel):
     message: str

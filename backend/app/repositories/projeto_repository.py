@@ -239,7 +239,11 @@ def listar_projetos_por_perfil(usuario_id: int, perfil: str) -> list[dict]:
                 JOIN professores prof
                     ON p.professor_orientador_id = prof.id
                 WHERE p.status = 'aprovado'
-                  AND p.visibilidade = 'publico'
+                AND EXISTS (
+                    SELECT 1
+                    FROM portfolios pf
+                    WHERE pf.projeto_id = p.id
+                        AND pf.visibilidade = 'publico'
                 ORDER BY p.id DESC
                 """
             )
@@ -264,9 +268,14 @@ def listar_projetos_por_perfil(usuario_id: int, perfil: str) -> list[dict]:
                 )
                 OR (
                     p.status = 'aprovado'
-                    AND p.visibilidade IN (
-                        'publico',
-                        'apenas_senac'
+                    AND EXISTS (
+                        SELECT 1
+                        FROM portfolios pf
+                        WHERE pf.projeto_id = p.id
+                        AND pf.visibilidade IN (
+                            'publico',
+                            'apenas_senac'
+                        )
                     )
                 )
                 ORDER BY p.id DESC
@@ -335,10 +344,15 @@ def pode_visualizar_projeto(
                 """
                 SELECT EXISTS (
                     SELECT 1
-                    FROM projetos
-                    WHERE id = %s
-                      AND status = 'aprovado'
-                      AND visibilidade = 'publico'
+                    FROM projetos p
+                    WHERE p.id = %s
+                    AND p.status = 'aprovado'
+                    AND EXISTS (
+                        SELECT 1
+                        FROM portfolios pf
+                        WHERE pf.projeto_id = p.id
+                            AND pf.visibilidade = 'publico'
+                    )
                 ) AS permitido
                 """,
                 (projeto_id,)
@@ -360,10 +374,15 @@ def pode_visualizar_projeto(
                           )
                           OR (
                               p.status = 'aprovado'
-                              AND p.visibilidade IN (
-                                  'publico',
-                                  'apenas_senac'
-                              )
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM portfolios pf
+                                    WHERE pf.projeto_id = p.id
+                                    AND pf.visibilidade IN (
+                                        'publico',
+                                        'apenas_senac'
+                                    )
+                                )
                           )
                       )
                 ) AS permitido
