@@ -15,6 +15,7 @@ from app.routes import versao_projeto_routes
 from app.routes import link_projeto_routes
 from app.routes import relatorios_routes
 from app.routes import auth_routes
+from app.routes import ranking_routes
 
 
 app = FastAPI()
@@ -56,6 +57,7 @@ app.include_router(versao_projeto_routes.router)
 app.include_router(link_projeto_routes.router)
 app.include_router(relatorios_routes.router)
 app.include_router(auth_routes.router)
+app.include_router( ranking_routes.router )
 
 @app.get("/")
 def home():
