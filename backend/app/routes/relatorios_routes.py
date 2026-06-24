@@ -1,76 +1,207 @@
-from typing import Optional
-
-from fastapi import APIRouter, status, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status
+)
 from fastapi.responses import Response
-
+from app.core.auth_core import (obter_usuario_logado, exigir_coordenador)
+from app.models.auth import UsuarioAutenticado
 from app.models.relatorios import (
-    RelatorioProjetosFiltros,
     RelatorioAcademicoFiltros,
-    RelatorioProjetosResponse,
     RelatorioAcademicoResponse,
+    RelatorioProjetosFiltros,
+    RelatorioProjetosResponse
 )
 import app.services.relatorios_service as relatorio_service
 
-# TODO: adicionar Depends de autenticacao/autorizacao (restringir a coordenacao)
-# quando o modulo de auth estiver finalizado. Por enquanto, sem protecao,
-# seguindo o mesmo padrao usado nas demais rotas do projeto.
 
 router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
 
-@router.get("/projetos", response_model=RelatorioProjetosResponse, status_code=status.HTTP_200_OK)
+def _validar_coordenador(usuario: UsuarioAutenticado) -> None:
+
+    exigir_coordenador(usuario)
+
+
+@router.get(
+    "/projetos",
+    response_model=RelatorioProjetosResponse,
+    status_code=status.HTTP_200_OK
+)
 def relatorio_de_projetos(
-    curso: Optional[str] = Query(default=None),
-    turma: Optional[str] = Query(default=None),
-    semestre: Optional[str] = Query(default=None),
-    status_projeto: Optional[str] = Query(default=None, alias="status")
+    curso: str | None = Query(default=None),
+    turma: str | None = Query(default=None),
+    semestre: str | None = Query(default=None),
+    status_projeto: str | None = Query(
+        default=None,
+        alias="status"
+    ),
+    professor_id: int | None = Query(
+        default=None,
+        ge=1
+    ),
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
 ):
+    
+    _validar_coordenador(usuario)
+
     try:
-        filtros = RelatorioProjetosFiltros(curso=curso, turma=turma, semestre=semestre, status=status_projeto)
-        return relatorio_service.gerar_relatorio_projetos(filtros)
+        filtros = RelatorioProjetosFiltros(
+            curso=curso,
+            turma=turma,
+            semestre=semestre,
+            status=status_projeto,
+            professor_id=professor_id
+        )
+
+        return (
+            relatorio_service.gerar_relatorio_projetos(
+                filtros
+            )
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.get("/academico", response_model=RelatorioAcademicoResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/academico",
+    response_model=RelatorioAcademicoResponse,
+    status_code=status.HTTP_200_OK
+)
 def relatorio_academico(
-    curso: Optional[str] = Query(default=None),
-    turma: Optional[str] = Query(default=None),
-    semestre: Optional[str] = Query(default=None)
+    curso: str | None = Query(default=None),
+    turma: str | None = Query(default=None),
+    semestre: str | None = Query(default=None),
+    professor_id: int | None = Query(
+        default=None,
+        ge=1
+    ),
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
 ):
-    filtros = RelatorioAcademicoFiltros(curso=curso, turma=turma, semestre=semestre)
-    return relatorio_service.gerar_relatorio_academico(filtros)
+    
+    _validar_coordenador(usuario)
+
+    filtros = RelatorioAcademicoFiltros(
+        curso=curso,
+        turma=turma,
+        semestre=semestre,
+        professor_id=professor_id
+    )
+
+    return relatorio_service.gerar_relatorio_academico(
+        filtros
+    )
 
 
-@router.get("/projetos/export", responses={400: {"description": "Filtro inválido"}})
+@router.get(
+    "/projetos/export",
+    response_class=Response,
+    status_code=status.HTTP_200_OK
+)
 def exportar_relatorio_de_projetos(
-    curso: Optional[str] = Query(default=None),
-    turma: Optional[str] = Query(default=None),
-    semestre: Optional[str] = Query(default=None),
-    status_projeto: Optional[str] = Query(default=None, alias="status")
+    curso: str | None = Query(default=None),
+    turma: str | None = Query(default=None),
+    semestre: str | None = Query(default=None),
+    status_projeto: str | None = Query(
+        default=None,
+        alias="status"
+    ),
+    professor_id: int | None = Query(
+        default=None,
+        ge=1
+    ),
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
 ):
+    
+    _validar_coordenador(usuario)
+
     try:
-        filtros = RelatorioProjetosFiltros(curso=curso, turma=turma, semestre=semestre, status=status_projeto)
-        pdf_bytes = relatorio_service.exportar_relatorio_projetos_pdf(filtros)
+        filtros = RelatorioProjetosFiltros(
+            curso=curso,
+            turma=turma,
+            semestre=semestre,
+            status=status_projeto,
+            professor_id=professor_id
+        )
+
+        pdf_bytes = (
+            relatorio_service
+            .exportar_relatorio_projetos_pdf(
+                filtros
+            )
+        )
+
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=relatorio_projetos.pdf"}
+            headers={
+                "Content-Disposition": (
+                    "attachment; "
+                    "filename=relatorio_projetos.pdf"
+                )
+            }
         )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.get("/academico/export")
+@router.get(
+    "/academico/export",
+    response_class=Response,
+    status_code=status.HTTP_200_OK
+)
 def exportar_relatorio_academico(
-    curso: Optional[str] = Query(default=None),
-    turma: Optional[str] = Query(default=None),
-    semestre: Optional[str] = Query(default=None)
+    curso: str | None = Query(default=None),
+    turma: str | None = Query(default=None),
+    semestre: str | None = Query(default=None),
+    professor_id: int | None = Query(
+        default=None,
+        ge=1
+    ),
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
 ):
-    filtros = RelatorioAcademicoFiltros(curso=curso, turma=turma, semestre=semestre)
-    pdf_bytes = relatorio_service.exportar_relatorio_academico_pdf(filtros)
+    
+    _validar_coordenador(usuario)
+
+    filtros = RelatorioAcademicoFiltros(
+        curso=curso,
+        turma=turma,
+        semestre=semestre,
+        professor_id=professor_id
+    )
+
+    pdf_bytes = (
+        relatorio_service
+        .exportar_relatorio_academico_pdf(
+            filtros
+        )
+    )
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=relatorio_academico.pdf"}
+        headers={
+            "Content-Disposition": (
+                "attachment; "
+                "filename=relatorio_academico.pdf"
+            )
+        }
     )

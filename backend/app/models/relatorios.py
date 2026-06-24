@@ -1,5 +1,5 @@
+from typing import Optional
 from pydantic import BaseModel
-from typing import Optional, List
 
 
 class RelatorioProjetosFiltros(BaseModel):
@@ -7,12 +7,14 @@ class RelatorioProjetosFiltros(BaseModel):
     turma: Optional[str] = None
     semestre: Optional[str] = None
     status: Optional[str] = None
+    professor_id: Optional[int] = None
 
 
 class RelatorioAcademicoFiltros(BaseModel):
     curso: Optional[str] = None
     turma: Optional[str] = None
     semestre: Optional[str] = None
+    professor_id: Optional[int] = None
 
 
 class ProjetoRelatorioItem(BaseModel):
@@ -32,7 +34,7 @@ class ProjetoRelatorioItem(BaseModel):
 class RelatorioProjetosResponse(BaseModel):
     total_projetos: int
     filtros_aplicados: RelatorioProjetosFiltros
-    projetos: List[ProjetoRelatorioItem]
+    projetos: list[ProjetoRelatorioItem]
 
 
 class IndicadorAcademico(BaseModel):
@@ -50,4 +52,4 @@ class IndicadorAcademico(BaseModel):
 
 class RelatorioAcademicoResponse(BaseModel):
     filtros_aplicados: RelatorioAcademicoFiltros
-    indicadores: List[IndicadorAcademico]
+    indicadores: list[IndicadorAcademico]
