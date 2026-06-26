@@ -1,58 +1,88 @@
+from app.core.security import gerar_hash
+from app.models.auth import UsuarioAutenticado
 from app.models.coordenador import CoordenadorUpdate
-from app.models.projeto import ProjetoStatusUpdate
 import app.repositories.coordenador_repository as coordenador_repository
-import app.services.projeto_service as projeto_service
-import app.services.certificado_service as certificado_service
 import app.services.logs_sistema_service as logs_sistema_service
 
 
-def buscar_coordenador_por_id(id_coordenador: int) -> dict:
+def buscar_coordenador_por_id(id_coordenador: int, usuario: UsuarioAutenticado) -> dict:
+    
     coordenador = coordenador_repository.buscar_por_id(id_coordenador)
+
     if not coordenador:
-        raise ValueError("Coordenador não encontrado")
+        raise ValueError(
+            "Coordenador não encontrado"
+        )
+
+    if (
+        usuario.perfil != "coordenador"
+        or usuario.id != id_coordenador
+    ):
+        raise ValueError(
+            "Você só pode visualizar o próprio cadastro"
+        )
+
     return coordenador
 
 
-def listar_coordenadores() -> list[dict]:
-    coordenadores = coordenador_repository.listar_coordenadores()
-    return coordenadores
+def atualizar_coordenador(
+    id_coordenador: int,
+    coordenador: CoordenadorUpdate,
+    usuario: UsuarioAutenticado
+) -> bool:
+    
+    coordenador_existente = (coordenador_repository.buscar_por_id(id_coordenador))
 
-
-
-def atualizar_coordenador(id_coordenador: int, coordenador: CoordenadorUpdate) -> bool:
-    coordenador_existente = coordenador_repository.buscar_por_id(id_coordenador)
     if not coordenador_existente:
-        raise ValueError("Coordenador não encontrado")
- 
+        raise ValueError(
+            "Coordenador não encontrado"
+        )
+
+    if (
+        usuario.perfil != "coordenador"
+        or usuario.id != id_coordenador
+    ):
+        raise ValueError(
+            "Você só pode alterar o próprio cadastro"
+        )
+
     dados = coordenador.model_dump(exclude_unset=True)
+
     if not dados:
-        raise ValueError("Nenhum dado informado para atualização")
- 
-    resultado = coordenador_repository.atualizar_coordenador(id_coordenador, dados)
- 
-    # TODO: substituir coordenador_id=1 quando a autenticação existir
+        raise ValueError(
+            "Nenhum dado informado para atualização"
+        )
+
+    nova_senha = dados.get("senha")
+
+    if not nova_senha:
+        raise ValueError(
+            "Nenhuma senha informada para atualização"
+        )
+
+    senha_hash = gerar_hash(
+        nova_senha
+    )
+
+    resultado = coordenador_repository.atualizar_senha(
+        id_coordenador=id_coordenador,
+        senha=senha_hash
+    )
+
+    if not resultado:
+        raise ValueError(
+            "Não foi possível atualizar a senha "
+            "do coordenador"
+        )
+
     logs_sistema_service.registrar_acao(
-        coordenador_id=1,
+        coordenador_id=usuario.id,
         acao="UPDATE",
         entidade="coordenadores",
         registro_id=id_coordenador,
-        detalhes="Coordenador atualizado"
-    )
- 
-    return resultado
-def aprovar_projeto(coordenador_id: int, id_projeto: int) -> bool:
-
-    status_update = ProjetoStatusUpdate(status="aprovado")
-    projeto_service.atualizar_status_projeto(id_projeto, status_update)
-
-    certificado_service.emitir_certificados_por_projeto(id_projeto)
-
-    logs_sistema_service.registrar_acao(
-        coordenador_id=coordenador_id,
-        acao="UPDATE",
-        entidade="projetos",
-        registro_id=id_projeto,
-        detalhes="Projeto aprovado e certificados emitidos automaticamente"
+        detalhes=(
+            "Coordenador alterou a própria senha"
+        )
     )
 
     return True

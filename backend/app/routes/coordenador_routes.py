@@ -4,15 +4,9 @@ from fastapi import (
     HTTPException,
     status
 )
-from app.core.auth_core import (
-    obter_usuario_logado,
-    exigir_coordenador
-)
+from app.core.auth_core import (obter_usuario_logado, exigir_coordenador)
 from app.models.auth import UsuarioAutenticado
-from app.models.coordenador import (
-    CoordenadorResponse,
-    CoordenadorUpdate
-)
+from app.models.coordenador import (CoordenadorResponse, CoordenadorUpdate)
 from app.models.projeto import ProjetoStatusUpdate
 import app.services.coordenador_service as coordenador_service
 import app.services.projeto_service as projeto_service
@@ -25,6 +19,7 @@ def validar_coordenador_da_rota(
     id_coordenador: int,
     usuario: UsuarioAutenticado
 ) -> None:
+    
     if usuario.id != id_coordenador:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -33,21 +28,6 @@ def validar_coordenador_da_rota(
                 "ao usuário autenticado"
             )
         )
-
-
-@router.get(
-    "/",
-    response_model=list[CoordenadorResponse],
-    status_code=status.HTTP_200_OK
-)
-def listar_coordenadores(
-    usuario: UsuarioAutenticado = Depends(
-        obter_usuario_logado
-    )
-):
-    exigir_coordenador(usuario)
-
-    return coordenador_service.listar_coordenadores()
 
 
 @router.get(
@@ -61,6 +41,7 @@ def buscar_coordenador_por_id(
         obter_usuario_logado
     )
 ):
+    
     exigir_coordenador(usuario)
 
     validar_coordenador_da_rota(
@@ -70,13 +51,22 @@ def buscar_coordenador_por_id(
 
     try:
         return coordenador_service.buscar_coordenador_por_id(
-            id_coordenador
+            id_coordenador=id_coordenador,
+            usuario=usuario
         )
 
     except ValueError as e:
+        mensagem = str(e)
+
+        if mensagem == "Coordenador não encontrado":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=mensagem
+            )
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=mensagem
         )
 
 
@@ -91,6 +81,7 @@ def atualizar_coordenador(
         obter_usuario_logado
     )
 ):
+    
     exigir_coordenador(usuario)
 
     validar_coordenador_da_rota(
@@ -100,12 +91,16 @@ def atualizar_coordenador(
 
     try:
         coordenador_service.atualizar_coordenador(
-            id_coordenador,
-            coordenador
+            id_coordenador=id_coordenador,
+            coordenador=coordenador,
+            usuario=usuario
         )
 
         return {
-            "message": "Coordenador atualizado com sucesso"
+            "message": (
+                "Senha do coordenador atualizada "
+                "com sucesso"
+            )
         }
 
     except ValueError as e:
@@ -114,6 +109,14 @@ def atualizar_coordenador(
         if mensagem == "Coordenador não encontrado":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
+                detail=mensagem
+            )
+
+        if mensagem == (
+            "Você só pode alterar o próprio cadastro"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
                 detail=mensagem
             )
 
@@ -134,6 +137,7 @@ def aprovar_projeto(
         obter_usuario_logado
     )
 ):
+    
     exigir_coordenador(usuario)
 
     validar_coordenador_da_rota(
@@ -181,6 +185,7 @@ def reprovar_projeto(
         obter_usuario_logado
     )
 ):
+    
     exigir_coordenador(usuario)
 
     validar_coordenador_da_rota(
