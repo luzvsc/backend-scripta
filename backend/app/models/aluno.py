@@ -5,11 +5,13 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    field_validator,
     model_validator
 )
 
 
 class AlunoBase(BaseModel):
+
     nome: str = Field(
         ...,
         min_length=3,
@@ -32,6 +34,36 @@ class AlunoCreate(AlunoBase):
         ...,
         min_length=6
     )
+
+    @field_validator(
+        "email",
+        mode="before"
+    )
+    @classmethod
+    def normalizar_email(
+        cls,
+        email: str
+    ) -> str:
+        return str(email).strip().lower()
+
+    @field_validator("email")
+    @classmethod
+    def validar_email_institucional(
+        cls,
+        email: EmailStr
+    ) -> EmailStr:
+        dominio = str(email).rsplit(
+            "@",
+            maxsplit=1
+        )[1]
+
+        if dominio != "edu.pe.senac.br":
+            raise ValueError(
+                "Utilize o email institucional do Senac "
+                "(@edu.pe.senac.br)"
+            )
+
+        return email
 
     @model_validator(mode="after")
     def verificar_senhas(

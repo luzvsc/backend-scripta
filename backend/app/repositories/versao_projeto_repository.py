@@ -2,6 +2,7 @@ from app.database.database import get_connection
 
 
 def buscar_por_id(id_versao: int) -> dict | None:
+
     conn = None
     cursor = None
 
@@ -12,12 +13,18 @@ def buscar_por_id(id_versao: int) -> dict | None:
         cursor.execute(
             """
             SELECT
-            vp.*,
-            p.titulo AS projeto_titulo
-        FROM versoes_projeto vp
-        JOIN projetos p
-            ON vp.projeto_id = p.id
-        WHERE vp.id = %s
+                vp.id,
+                vp.projeto_id,
+                p.titulo AS projeto_titulo,
+                vp.titulo_na_epoca,
+                vp.descricao_na_epoca,
+                vp.quem_alterou_tipo,
+                vp.quem_alterou_id,
+                vp.data_alteracao
+            FROM versoes_projeto vp
+            JOIN projetos p
+                ON p.id = vp.projeto_id
+            WHERE vp.id = %s
             """,
             (id_versao,)
         )
@@ -27,6 +34,7 @@ def buscar_por_id(id_versao: int) -> dict | None:
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
 
@@ -38,7 +46,7 @@ def criar_versao(
     quem_alterou_tipo: str,
     quem_alterou_id: int
 ) -> int:
-
+    
     conn = None
     cursor = None
 
@@ -48,8 +56,7 @@ def criar_versao(
 
         cursor.execute(
             """
-            INSERT INTO versoes_projeto
-            (
+            INSERT INTO versoes_projeto (
                 projeto_id,
                 titulo_na_epoca,
                 descricao_na_epoca,
@@ -69,11 +76,19 @@ def criar_versao(
 
         conn.commit()
 
-        return cursor.lastrowid
+        id_versao = cursor.lastrowid
+
+        if id_versao is None:
+            raise RuntimeError(
+                "Não foi possível obter o ID da versão"
+            )
+
+        return int(id_versao)
 
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
 
@@ -90,11 +105,17 @@ def listar_versoes() -> list[dict]:
         cursor.execute(
             """
             SELECT
-                vp.*,
-                p.titulo AS projeto_titulo
+                vp.id,
+                vp.projeto_id,
+                p.titulo AS projeto_titulo,
+                vp.titulo_na_epoca,
+                vp.descricao_na_epoca,
+                vp.quem_alterou_tipo,
+                vp.quem_alterou_id,
+                vp.data_alteracao
             FROM versoes_projeto vp
             JOIN projetos p
-                ON vp.projeto_id = p.id
+                ON p.id = vp.projeto_id
             ORDER BY vp.data_alteracao DESC
             """
         )
@@ -104,6 +125,7 @@ def listar_versoes() -> list[dict]:
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
 
@@ -120,13 +142,19 @@ def listar_por_projeto(projeto_id: int) -> list[dict]:
         cursor.execute(
             """
             SELECT
-            vp.*,
-            p.titulo AS projeto_titulo
-        FROM versoes_projeto vp
-        JOIN projetos p
-            ON vp.projeto_id = p.id
-        WHERE vp.projeto_id = %s
-        ORDER BY vp.data_alteracao DESC
+                vp.id,
+                vp.projeto_id,
+                p.titulo AS projeto_titulo,
+                vp.titulo_na_epoca,
+                vp.descricao_na_epoca,
+                vp.quem_alterou_tipo,
+                vp.quem_alterou_id,
+                vp.data_alteracao
+            FROM versoes_projeto vp
+            JOIN projetos p
+                ON p.id = vp.projeto_id
+            WHERE vp.projeto_id = %s
+            ORDER BY vp.data_alteracao DESC
             """,
             (projeto_id,)
         )
@@ -136,5 +164,6 @@ def listar_por_projeto(projeto_id: int) -> list[dict]:
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
