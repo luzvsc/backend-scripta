@@ -1,61 +1,196 @@
-from app.models.empresa import EmpresaCreate, EmpresaUpdate
-import app.repositories.empresa_repository as empresa_repository
 from app.core.security import gerar_hash
+from app.models.auth import UsuarioAutenticado
+from app.models.empresa import (
+    EmpresaCreate,
+    EmpresaUpdate
+)
+import app.repositories.empresa_repository as empresa_repository
 import app.services.logs_sistema_service as logs_sistema_service
 
 
-def cadastrar_empresa(empresa: EmpresaCreate):
-    empresa_existente = empresa_repository.buscar_por_email(empresa.email_contato)
-    if empresa_existente:
-        raise ValueError("Este email já está cadastrado no Scripta")
+def cadastrar_empresa(empresa: EmpresaCreate) -> int:
     
+    empresa_email = empresa_repository.buscar_por_email(str(empresa.email_contato))
+
+    if empresa_email:
+        raise ValueError(
+            "Este email já está cadastrado no Scripta"
+        )
+
+    empresa_cnpj = empresa_repository.buscar_por_cnpj(empresa.cnpj)
+
+    if empresa_cnpj:
+        raise ValueError(
+            "Este CNPJ já está cadastrado no Scripta"
+        )
+
     senha_hash = gerar_hash(empresa.senha)
 
-    id_empresa = empresa_repository.criar_empresa(nome_empresa=empresa.nome_empresa,
-                                            email_contato=empresa.email_contato,
-                                            senha=senha_hash,
-                                            cnpj=empresa.cnpj,
-                                            setor=empresa.setor)
-    return id_empresa
+    return empresa_repository.criar_empresa(
+        nome_empresa=empresa.nome_empresa,
+        email_contato=str(empresa.email_contato),
+        senha=senha_hash,
+        cnpj=empresa.cnpj,
+        setor=empresa.setor
+    )
 
 
 def buscar_empresa_por_email(email_contato: str) -> dict:
+    
     empresa = empresa_repository.buscar_por_email(email_contato)
+
     if not empresa:
-        raise ValueError("Empresa não encontrada")
+        raise ValueError(
+            "Empresa não encontrada"
+        )
+
     return empresa
 
 
-def buscar_empresa_por_id(id_empresa: int) -> dict:
+def buscar_empresa_por_id(id_empresa: int, usuario: UsuarioAutenticado) -> dict:
+
     empresa = empresa_repository.buscar_por_id(id_empresa)
+
     if not empresa:
-        raise ValueError("Empresa não encontrada")
-    return empresa
+        raise ValueError(
+            "Empresa não encontrada"
+        )
+
+    if usuario.perfil == "coordenador":
+        return empresa
+
+    if (
+        usuario.perfil == "empresa"
+        and usuario.id == id_empresa
+    ):
+        return empresa
+
+    raise ValueError(
+        "Você não tem permissão para visualizar "
+        "este cadastro"
+    )
 
 
 def listar_empresas() -> list[dict]:
-    empresas = empresa_repository.listar_empresas()
-    return empresas
+
+    return empresa_repository.listar_empresas()
 
 
-def atualizar_empresa(id_empresa: int, empresa: EmpresaUpdate) -> bool:
+def atualizar_empresa(
+    id_empresa: int,
+    empresa: EmpresaUpdate,
+    usuario: UsuarioAutenticado
+) -> bool:
+    
     empresa_existente = empresa_repository.buscar_por_id(id_empresa)
+
     if not empresa_existente:
-        raise ValueError("Empresa não encontrada")
-    
+        raise ValueError(
+            "Empresa não encontrada"
+        )
+
+    if usuario.perfil == "empresa":
+        if usuario.id != id_empresa:
+            raise ValueError(
+                "Você só pode alterar o próprio cadastro"
+            )
+
+    elif usuario.perfil != "coordenador":
+        raise ValueError(
+            "Você não tem permissão para alterar "
+            "este cadastro"
+        )
+
     dados = empresa.model_dump(exclude_unset=True)
+
     if not dados:
-        raise ValueError("Nenhum dado informado para atualização")
-    
-    resultado = empresa_repository.atualizar_empresa(id_empresa, dados)
- 
-    # TODO: substituir coordenador_id=1 quando a autenticação existir
+        raise ValueError(
+            "Nenhum dado informado para atualização"
+        )
+
+    dados.pop(
+        "confirmar_senha",
+        None
+    )
+
+    novo_email = dados.get("email_contato")
+
+    if novo_email:
+        novo_email = str(novo_email)
+
+        empresa_email = empresa_repository.buscar_por_email(
+            novo_email
+        )
+
+        if (
+            empresa_email
+            and empresa_email["id"] != id_empresa
+        ):
+            raise ValueError(
+                "Este email já está cadastrado no Scripta"
+            )
+
+        dados["email_contato"] = novo_email
+
+    nova_senha = dados.get(
+        "senha"
+    )
+
+    if nova_senha:
+        dados["senha"] = gerar_hash(
+            nova_senha
+        )
+
+    resultado = empresa_repository.atualizar_empresa(
+        id_empresa=id_empresa,
+        dados=dados
+    )
+
+    if not resultado:
+        raise ValueError(
+            "Não foi possível atualizar a empresa"
+        )
+
+    if usuario.perfil == "coordenador":
+        logs_sistema_service.registrar_acao(
+            coordenador_id=usuario.id,
+            acao="UPDATE",
+            entidade="empresas",
+            registro_id=id_empresa,
+            detalhes=(
+                "Dados de contato ou senha da empresa "
+                "atualizados pela coordenação"
+            )
+        )
+
+    return True
+
+
+def deletar_empresa(id_empresa: int, coordenador_id: int) -> bool:
+
+    empresa = empresa_repository.buscar_por_id(id_empresa)
+
+    if not empresa:
+        raise ValueError(
+            "Empresa não encontrada"
+        )
+
+    resultado = empresa_repository.deletar_empresa(id_empresa)
+
+    if not resultado:
+        raise ValueError(
+            "Não foi possível remover a empresa. "
+            "Verifique se existem registros vinculados."
+        )
+
     logs_sistema_service.registrar_acao(
-        coordenador_id=1,
-        acao="UPDATE",
+        coordenador_id=coordenador_id,
+        acao="DELETE",
         entidade="empresas",
         registro_id=id_empresa,
-        detalhes="Empresa atualizada"
+        detalhes=(
+            f"Empresa '{empresa['nome_empresa']}' removida"
+        )
     )
- 
-    return resultado
+
+    return True
