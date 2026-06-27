@@ -69,6 +69,24 @@ def listar_projetos(
 
 
 @router.get(
+    "/explorar",
+    response_model=List[ProjetoListResponse],
+    status_code=status.HTTP_200_OK
+)
+def listar_projetos_exploraveis(
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
+):
+    exigir_aluno(usuario)
+
+    return (
+        projeto_service
+        .listar_projetos_exploraveis()
+    )
+
+
+@router.get(
     "/{id_projeto}",
     response_model=ProjetoResponse,
     responses={

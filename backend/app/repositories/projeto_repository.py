@@ -102,7 +102,7 @@ def atualizar_projeto(id_projeto: int, dados: dict[str, Any]) -> bool:
         for chave, valor in dados.items():
             campos.append(f"{chave} = %s")
             valores.append(valor)
-        
+
         if not campos:
             return False
 
@@ -301,7 +301,7 @@ def pode_visualizar_projeto(
     usuario_id: int,
     perfil: str
 ) -> bool:
-    
+
     conn = None
     cursor = None
 
@@ -402,6 +402,56 @@ def pode_visualizar_projeto(
             resultado
             and resultado["permitido"]
         )
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+
+def listar_projetos_exploraveis() -> list[dict[str, Any]]:
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT DISTINCT
+                p.id,
+                p.titulo,
+                p.curso,
+                p.turma,
+                p.semestre,
+                p.area_conhecimento,
+                p.status,
+                a.nome AS aluno_responsavel,
+                prof.nome AS professor_orientador
+            FROM projetos p
+            JOIN alunos a
+                ON a.id = p.aluno_responsavel_id
+            JOIN professores prof
+                ON prof.id = p.professor_orientador_id
+            WHERE p.status = 'aprovado'
+              AND EXISTS (
+                  SELECT 1
+                  FROM portfolios pf
+                  WHERE pf.projeto_id = p.id
+                    AND pf.visibilidade IN (
+                        'publico',
+                        'apenas_senac'
+                    )
+              )
+            ORDER BY p.id DESC
+            """
+        )
+
+        return list(cursor.fetchall())
 
     finally:
         if cursor:

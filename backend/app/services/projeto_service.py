@@ -430,3 +430,11 @@ def deletar_projeto(id_projeto: int, coordenador_id: int) -> bool:
     )
 
     return True
+
+
+def listar_projetos_exploraveis() -> list[dict]:
+
+    return (
+        projeto_repository
+        .listar_projetos_exploraveis()
+    )
