@@ -4,9 +4,15 @@ import app.repositories.logs_sistema_repository as logs_sistema_repository
 ACOES_VALIDAS = {"CREATE", "UPDATE", "DELETE"}
 
 ENTIDADES_VALIDAS = {
-    "alunos", "professores", "coordenadores",
-    "empresas", "projetos", "certificados",
-    "arquivos_projeto", "avaliacoes"
+    "alunos",
+    "professores",
+    "coordenadores",
+    "empresas",
+    "projetos",
+    "projeto_integrantes",
+    "certificados",
+    "arquivos_projeto",
+    "avaliacoes"
 }
 
 
