@@ -185,3 +185,49 @@ def buscar_ultima_versao(projeto_id: int) -> dict | None:
             cursor.close()
         if conn:
             conn.close()
+
+
+def atualizar_arquivo(id_arquivo: int, dados: dict) -> bool:
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        if not dados:
+            return False
+
+        campos = []
+        valores = []
+
+        for campo, valor in dados.items():
+            campos.append(
+                f"{campo} = %s"
+            )
+            valores.append(valor)
+
+        valores.append(id_arquivo)
+
+        sql = (
+            "UPDATE arquivos_projeto "
+            f"SET {', '.join(campos)} "
+            "WHERE id = %s"
+        )
+
+        cursor.execute(
+            sql,
+            tuple(valores)
+        )
+
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()

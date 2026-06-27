@@ -40,3 +40,18 @@ class ArquivoProjetoListResponse(BaseModel):
     projeto_id: int
     nome_original: str
     tamanho_mb: float
+
+
+class ArquivoProjetoMetadataCreate(BaseModel):
+
+    projeto_id: int
+    nome_original: str = Field(
+        ...,
+        min_length=1,
+        max_length=255
+    )
+    tamanho_mb: float = Field(
+        ...,
+        gt=0,
+        le=50
+    )

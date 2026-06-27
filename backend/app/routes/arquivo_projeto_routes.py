@@ -3,7 +3,9 @@ from app.models.arquivo_projeto import (
     ArquivoProjetoCreate,
     ArquivoProjetoCreateResponse,
     ArquivoProjetoResponse,
-    ArquivoProjetoListResponse
+    ArquivoProjetoListResponse,
+    ArquivoProjetoMetadataCreate,
+    ArquivoProjetoUpdate
 )
 from app.models.auth import UsuarioAutenticado
 from app.core.auth_core import (
@@ -71,6 +73,67 @@ def criar_arquivo(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=mensagem
+        )
+
+
+@router.post(
+    "/metadados",
+    response_model=ArquivoProjetoCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Dados inválidos"
+        },
+        403: {
+            "description": "Acesso negado"
+        },
+        404: {
+            "description": "Projeto não encontrado"
+        }
+    }
+)
+def criar_metadado_arquivo(
+    payload: ArquivoProjetoMetadataCreate,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
+):
+
+    exigir_coordenador(usuario)
+
+    try:
+        arquivo_id = (
+            arquivo_projeto_service
+            .criar_metadado_arquivo(
+                arquivo=payload,
+                coordenador_id=usuario.id
+            )
+        )
+
+        return {
+            "message": (
+                "Metadado do arquivo "
+                "cadastrado com sucesso"
+            ),
+            "id": arquivo_id
+        }
+
+    except ValueError as e:
+        mensagem = str(e)
+
+        if mensagem == "Projeto não encontrado":
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
+                detail=mensagem
+            )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
             detail=mensagem
         )
 
@@ -191,6 +254,64 @@ def buscar_arquivo_por_id(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=mensagem
+        )
+
+
+@router.put(
+    "/{id_arquivo}",
+    status_code=status.HTTP_200_OK,
+    responses={
+        400: {
+            "description": "Dados inválidos"
+        },
+        403: {
+            "description": "Acesso negado"
+        },
+        404: {
+            "description": "Arquivo não encontrado"
+        }
+    }
+)
+def atualizar_arquivo(
+    id_arquivo: int,
+    payload: ArquivoProjetoUpdate,
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
+):
+
+    exigir_coordenador(usuario)
+
+    try:
+        arquivo_projeto_service.atualizar_arquivo(
+            id_arquivo=id_arquivo,
+            arquivo=payload,
+            coordenador_id=usuario.id
+        )
+
+        return {
+            "message": (
+                "Metadados do arquivo "
+                "atualizados com sucesso"
+            )
+        }
+
+    except ValueError as e:
+        mensagem = str(e)
+
+        if mensagem == "Arquivo não encontrado":
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_404_NOT_FOUND
+                ),
+                detail=mensagem
+            )
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
             detail=mensagem
         )
 

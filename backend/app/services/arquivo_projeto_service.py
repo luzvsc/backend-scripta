@@ -1,4 +1,9 @@
-from app.models.arquivo_projeto import (ArquivoProjetoCreate)
+from uuid import uuid4
+from app.models.arquivo_projeto import (
+    ArquivoProjetoCreate,
+    ArquivoProjetoMetadataCreate,
+    ArquivoProjetoUpdate
+)
 from app.models.auth import UsuarioAutenticado
 from app.models.versao_projeto import (VersaoProjetoCreate)
 from app.repositories import (arquivo_projeto_repository as repository)
@@ -161,6 +166,117 @@ def buscar_ultimo_arquivo(projeto_id: int, usuario: UsuarioAutenticado) -> dict:
         )
 
     return arquivo
+
+
+def criar_metadado_arquivo(arquivo: ArquivoProjetoMetadataCreate, coordenador_id: int) -> int:
+
+    projeto = projeto_repository.buscar_por_id(arquivo.projeto_id)
+
+    if not projeto:
+        raise ValueError(
+            "Projeto não encontrado"
+        )
+
+    identificador = uuid4().hex
+
+    caminho_metadado = (
+        "metadata-only://"
+        f"projetos/{arquivo.projeto_id}/"
+        f"{identificador}"
+    )
+
+    arquivo_id = repository.criar_arquivo(
+        projeto_id=arquivo.projeto_id,
+        nome_original=arquivo.nome_original,
+        caminho_servidor=caminho_metadado,
+        tamanho_mb=arquivo.tamanho_mb
+    )
+
+    logs_sistema_service.registrar_acao(
+        coordenador_id=coordenador_id,
+        acao="CREATE",
+        entidade="arquivos_projeto",
+        registro_id=arquivo_id,
+        detalhes=(
+            f"Metadado do arquivo "
+            f"'{arquivo.nome_original}' "
+            f"cadastrado no projeto "
+            f"{arquivo.projeto_id}"
+        )
+    )
+
+    return arquivo_id
+
+
+def atualizar_arquivo(
+    id_arquivo: int,
+    arquivo: ArquivoProjetoUpdate,
+    coordenador_id: int
+) -> bool:
+
+    arquivo_existente = (
+        repository.buscar_por_id(id_arquivo)
+    )
+
+    if not arquivo_existente:
+        raise ValueError(
+            "Arquivo não encontrado"
+        )
+
+    dados_recebidos = (
+        arquivo.model_dump(
+            exclude_unset=True
+        )
+    )
+
+    if not dados_recebidos:
+        raise ValueError(
+            "Nenhum dado informado para atualização"
+        )
+
+    dados_alterados = {
+        campo: valor
+        for campo, valor
+        in dados_recebidos.items()
+        if valor
+        != arquivo_existente.get(campo)
+    }
+
+    if not dados_alterados:
+        raise ValueError(
+            "Nenhuma alteração identificada"
+        )
+
+    atualizado = (
+        repository.atualizar_arquivo(
+            id_arquivo=id_arquivo,
+            dados=dados_alterados
+        )
+    )
+
+    if not atualizado:
+        raise ValueError(
+            "Não foi possível atualizar o arquivo"
+        )
+
+    campos_alterados = ", ".join(
+        dados_alterados.keys()
+    )
+
+    logs_sistema_service.registrar_acao(
+        coordenador_id=coordenador_id,
+        acao="UPDATE",
+        entidade="arquivos_projeto",
+        registro_id=id_arquivo,
+        detalhes=(
+            f"Metadados do arquivo "
+            f"'{arquivo_existente['nome_original']}' "
+            f"atualizados. Campos: "
+            f"{campos_alterados}"
+        )
+    )
+
+    return True
 
 
 def deletar_arquivo(id_arquivo: int, coordenador_id: int) -> bool:
