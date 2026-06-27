@@ -59,6 +59,10 @@ class ProjetoCreateResponse(BaseModel):
 class ProjetoListResponse(BaseModel):
     id: int
     titulo: str
+    curso: str
+    turma: str
+    semestre: str
+    area_conhecimento: str
 
     status: Literal[
         "rascunho",

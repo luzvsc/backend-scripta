@@ -1,10 +1,8 @@
 from app.models.avaliacao import (AvaliacaoCreate, AvaliacaoUpdate)
 from app.models.auth import UsuarioAutenticado
-from app.models.projeto import ProjetoStatusUpdate
 from app.repositories import (avaliacao_repository as repository)
 import app.repositories.projeto_repository as projeto_repository
 import app.repositories.projeto_integrante_repository as integrante_repository
-import app.services.projeto_service as projeto_service
 
 
 def calcular_media(
@@ -110,12 +108,10 @@ def criar_avaliacao(avaliacao: AvaliacaoCreate, professor_id: int) -> int:
     )
 
     if projeto["status"] == "submetido":
-        projeto_service.atualizar_status_projeto(
-            id_projeto=avaliacao.projeto_id,
-            status_update=ProjetoStatusUpdate(
-                status="em_avaliacao"
-            )
-        )
+        projeto_repository.atualizar_status_projeto(
+            projeto_id=avaliacao.projeto_id,
+            status="em_avaliacao"
+    )
 
     return id_avaliacao
 
