@@ -29,7 +29,7 @@ router = APIRouter(prefix="/empresas", tags=["Empresas"])
 def cadastrar_empresa(
     empresa: EmpresaCreate
 ):
-    
+
     try:
         id_empresa = empresa_service.cadastrar_empresa(
             empresa
@@ -73,7 +73,7 @@ def buscar_empresa_por_id(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         return empresa_service.buscar_empresa_por_id(
             id_empresa=id_empresa,
@@ -106,7 +106,7 @@ def atualizar_empresa(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         empresa_service.atualizar_empresa(
             id_empresa=id_empresa,
@@ -129,8 +129,8 @@ def atualizar_empresa(
 
         if mensagem in (
             "Você só pode alterar o próprio cadastro",
-            "Você não tem permissão para alterar "
-            "este cadastro"
+            "Você não tem permissão para alterar este cadastro",
+            "Você não tem permissão para alterar estes campos"
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -138,12 +138,14 @@ def atualizar_empresa(
             )
 
         if mensagem == (
-            "Este email já está cadastrado no Scripta"
+            "Este email já está cadastrado no Scripta",
+            "Este CNPJ já está cadastrado no Scripta"
         ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=mensagem
             )
+
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -161,7 +163,7 @@ def deletar_empresa(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_coordenador(usuario)
 
     try:

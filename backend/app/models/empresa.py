@@ -64,8 +64,21 @@ class EmpresaLogin(BaseModel):
 
 
 class EmpresaUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid"
+    )
 
-    model_config = ConfigDict(extra="forbid")
+    nome_empresa: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=150
+    )
+
+    cnpj: Optional[str] = Field(
+        default=None,
+        min_length=14,
+        max_length=18
+    )
 
     email_contato: Optional[EmailStr] = None
 
@@ -85,9 +98,13 @@ class EmpresaUpdate(BaseModel):
     )
 
     @model_validator(mode="after")
-    def verificar_nova_senha(self) -> "EmpresaUpdate":
+    def verificar_nova_senha(
+        self
+    ) -> "EmpresaUpdate":
+        senha_informada = (
+            self.senha is not None
+        )
 
-        senha_informada = self.senha is not None
         confirmacao_informada = (
             self.confirmar_senha is not None
         )
@@ -99,7 +116,8 @@ class EmpresaUpdate(BaseModel):
 
         if (
             senha_informada
-            and self.senha != self.confirmar_senha
+            and self.senha
+            != self.confirmar_senha
         ):
             raise ValueError(
                 "A senha e a confirmação da senha "

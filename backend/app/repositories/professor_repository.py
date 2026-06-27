@@ -176,7 +176,29 @@ def listar_opcoes_orientadores() -> list[dict[str, Any]]:
             conn.close()
 
 
-def atualizar_senha(id_professor: int, senha: str) -> bool:
+def atualizar_professor(id_professor: int, dados: dict[str, Any]) -> bool:
+
+    campos_permitidos = {
+        "nome",
+        "email",
+        "area_atuacao",
+        "senha"
+    }
+
+    campos: list[str] = []
+    valores: list[Any] = []
+
+    for chave, valor in dados.items():
+        if chave in campos_permitidos:
+            campos.append(
+                f"{chave} = %s"
+            )
+            valores.append(valor)
+
+    if not campos:
+        return False
+
+    valores.append(id_professor)
 
     conn = None
     cursor = None
@@ -185,21 +207,26 @@ def atualizar_senha(id_professor: int, senha: str) -> bool:
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute(
-            """
+        sql = f"""
             UPDATE professores
-            SET senha = %s
+            SET {", ".join(campos)}
             WHERE id = %s
-            """,
-            (
-                senha,
-                id_professor
-            )
+        """
+
+        cursor.execute(
+            sql,
+            tuple(valores)
         )
 
         conn.commit()
 
-        return cursor.rowcount > 0
+        return True
+
+    except IntegrityError:
+        if conn:
+            conn.rollback()
+
+        return False
 
     finally:
         if cursor:

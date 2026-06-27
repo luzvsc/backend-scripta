@@ -26,7 +26,7 @@ router = APIRouter(prefix="/alunos", tags=["Alunos"])
 def cadastrar_aluno(
     aluno: AlunoCreate
 ):
-    
+
     try:
         id_aluno = aluno_service.cadastrar_aluno(
             aluno
@@ -54,7 +54,7 @@ def listar_alunos(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_coordenador(usuario)
 
     return aluno_service.listar_alunos()
@@ -71,7 +71,7 @@ def buscar_aluno_por_id(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         return aluno_service.buscar_aluno_por_id(
             id_aluno=id_aluno,
@@ -104,7 +104,7 @@ def atualizar_aluno(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         aluno_service.atualizar_aluno(
             id_aluno=id_aluno,
@@ -127,11 +127,27 @@ def atualizar_aluno(
 
         if mensagem in (
             "Você só pode alterar o próprio cadastro",
-            "Você não tem permissão para alterar "
-            "este cadastro"
+            "Você não tem permissão para alterar este cadastro",
+            "Você não tem permissão para alterar estes campos"
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
+                detail=mensagem
+            )
+
+        if mensagem == (
+            "Este email já está cadastrado no Scripta"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=mensagem
+            )
+
+        if mensagem == (
+            "Esta matrícula já está cadastrada"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
                 detail=mensagem
             )
 
@@ -139,6 +155,7 @@ def atualizar_aluno(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=mensagem
         )
+
 
 
 @router.delete(
@@ -151,7 +168,7 @@ def deletar_aluno(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_coordenador(usuario)
 
     try:

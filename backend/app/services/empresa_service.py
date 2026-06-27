@@ -81,8 +81,12 @@ def atualizar_empresa(
     empresa: EmpresaUpdate,
     usuario: UsuarioAutenticado
 ) -> bool:
-    
-    empresa_existente = empresa_repository.buscar_por_id(id_empresa)
+
+    empresa_existente = (
+        empresa_repository.buscar_por_id(
+            id_empresa
+        )
+    )
 
     if not empresa_existente:
         raise ValueError(
@@ -95,17 +99,47 @@ def atualizar_empresa(
                 "Você só pode alterar o próprio cadastro"
             )
 
-    elif usuario.perfil != "coordenador":
+        campos_permitidos = {
+            "email_contato",
+            "setor",
+            "senha",
+            "confirmar_senha"
+        }
+
+    elif usuario.perfil == "coordenador":
+        campos_permitidos = {
+            "nome_empresa",
+            "cnpj",
+            "email_contato",
+            "setor",
+            "senha",
+            "confirmar_senha"
+        }
+
+    else:
         raise ValueError(
             "Você não tem permissão para alterar "
             "este cadastro"
         )
 
-    dados = empresa.model_dump(exclude_unset=True)
+    dados = empresa.model_dump(
+        exclude_unset=True
+    )
 
     if not dados:
         raise ValueError(
             "Nenhum dado informado para atualização"
+        )
+
+    campos_nao_permitidos = (
+        set(dados)
+        - campos_permitidos
+    )
+
+    if campos_nao_permitidos:
+        raise ValueError(
+            "Você não tem permissão para alterar "
+            "estes campos"
         )
 
     dados.pop(
@@ -113,37 +147,81 @@ def atualizar_empresa(
         None
     )
 
-    novo_email = dados.get("email_contato")
+    novo_email = dados.get(
+        "email_contato"
+    )
 
-    if novo_email:
-        novo_email = str(novo_email)
-
-        empresa_email = empresa_repository.buscar_por_email(
+    if novo_email is not None:
+        novo_email = str(
             novo_email
+        ).strip().lower()
+
+        empresa_email = (
+            empresa_repository.buscar_por_email(
+                novo_email
+            )
         )
 
         if (
             empresa_email
-            and empresa_email["id"] != id_empresa
+            and empresa_email["id"]
+            != id_empresa
         ):
             raise ValueError(
                 "Este email já está cadastrado no Scripta"
             )
 
-        dados["email_contato"] = novo_email
+        dados["email_contato"] = (
+            novo_email
+        )
 
-    nova_senha = dados.get(
+    novo_cnpj = dados.get("cnpj")
+
+    if novo_cnpj:
+        empresa_cnpj = (
+            empresa_repository.buscar_por_cnpj(
+                novo_cnpj
+            )
+        )
+
+        if (
+            empresa_cnpj
+            and empresa_cnpj["id"]
+            != id_empresa
+        ):
+            raise ValueError(
+                "Este CNPJ já está cadastrado no Scripta"
+            )
+
+    dados_alterados = {
+        campo: valor
+        for campo, valor in dados.items()
+        if (
+            campo == "senha"
+            or valor
+            != empresa_existente.get(campo)
+        )
+    }
+
+    if not dados_alterados:
+        raise ValueError(
+            "Nenhuma alteração identificada"
+        )
+
+    nova_senha = dados_alterados.get(
         "senha"
     )
 
     if nova_senha:
-        dados["senha"] = gerar_hash(
-            nova_senha
+        dados_alterados["senha"] = (
+            gerar_hash(nova_senha)
         )
 
-    resultado = empresa_repository.atualizar_empresa(
-        id_empresa=id_empresa,
-        dados=dados
+    resultado = (
+        empresa_repository.atualizar_empresa(
+            id_empresa=id_empresa,
+            dados=dados_alterados
+        )
     )
 
     if not resultado:
@@ -152,14 +230,18 @@ def atualizar_empresa(
         )
 
     if usuario.perfil == "coordenador":
+        campos = ", ".join(
+            dados_alterados.keys()
+        )
+
         logs_sistema_service.registrar_acao(
             coordenador_id=usuario.id,
             acao="UPDATE",
             entidade="empresas",
             registro_id=id_empresa,
             detalhes=(
-                "Dados de contato ou senha da empresa "
-                "atualizados pela coordenação"
+                "Cadastro da empresa atualizado. "
+                f"Campos alterados: {campos}"
             )
         )
 

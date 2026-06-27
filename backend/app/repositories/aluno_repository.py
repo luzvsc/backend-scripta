@@ -193,10 +193,16 @@ def listar_alunos() -> list[dict[str, Any]]:
 def atualizar_aluno(id_aluno: int, dados: dict[str, Any]) -> bool:
 
     campos_permitidos = {
-        "senha",
-        "linkedin_url",
-        "github_url",
-        "competencias"
+    "nome",
+    "email",
+    "senha",
+    "matricula",
+    "curso",
+    "turma",
+    "semestre_ingresso",
+    "linkedin_url",
+    "github_url",
+    "competencias"
     }
 
     campos: list[str] = []

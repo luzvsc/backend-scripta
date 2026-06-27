@@ -1,5 +1,4 @@
 from typing import Optional
-
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -101,14 +100,33 @@ class AlunoUpdate(BaseModel):
         extra="forbid"
     )
 
-    senha: Optional[str] = Field(
+    nome: Optional[str] = Field(
         default=None,
-        min_length=6
+        min_length=3,
+        max_length=150
     )
 
-    confirmar_senha: Optional[str] = Field(
+    email: Optional[EmailStr] = None
+
+    matricula: Optional[str] = Field(
         default=None,
-        min_length=6
+        max_length=20
+    )
+
+    curso: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+
+    turma: Optional[str] = Field(
+        default=None,
+        max_length=50
+    )
+
+    semestre_ingresso: Optional[str] = Field(
+        default=None,
+        max_length=10
     )
 
     linkedin_url: Optional[str] = Field(
@@ -126,11 +144,60 @@ class AlunoUpdate(BaseModel):
         max_length=255
     )
 
+    senha: Optional[str] = Field(
+        default=None,
+        min_length=6
+    )
+
+    confirmar_senha: Optional[str] = Field(
+        default=None,
+        min_length=6
+    )
+
+    @field_validator(
+        "email",
+        mode="before"
+    )
+    @classmethod
+    def normalizar_email(
+        cls,
+        email: str | None
+    ) -> str | None:
+        if email is None:
+            return None
+
+        return str(email).strip().lower()
+
+    @field_validator("email")
+    @classmethod
+    def validar_email_institucional(
+        cls,
+        email: EmailStr | None
+    ) -> EmailStr | None:
+        if email is None:
+            return None
+
+        dominio = str(email).rsplit(
+            "@",
+            maxsplit=1
+        )[1]
+
+        if dominio != "edu.pe.senac.br":
+            raise ValueError(
+                "Utilize o email institucional do Senac "
+                "(@edu.pe.senac.br)"
+            )
+
+        return email
+
     @model_validator(mode="after")
     def verificar_nova_senha(
         self
     ) -> "AlunoUpdate":
-        senha_informada = self.senha is not None
+        senha_informada = (
+            self.senha is not None
+        )
+
         confirmacao_informada = (
             self.confirmar_senha is not None
         )
@@ -142,7 +209,8 @@ class AlunoUpdate(BaseModel):
 
         if (
             senha_informada
-            and self.senha != self.confirmar_senha
+            and self.senha
+            != self.confirmar_senha
         ):
             raise ValueError(
                 "A senha e a confirmação da senha "

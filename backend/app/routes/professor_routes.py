@@ -31,7 +31,7 @@ router = APIRouter(prefix="/professores", tags=["Professores"])
 def cadastrar_professor(
     professor: ProfessorCreate
 ):
-    
+
     try:
         id_professor = professor_service.cadastrar_professor(professor)
 
@@ -57,7 +57,7 @@ def listar_opcoes_orientadores(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_aluno(usuario)
 
     return professor_service.listar_opcoes_orientadores()
@@ -73,7 +73,7 @@ def listar_professores(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_coordenador(usuario)
 
     return professor_service.listar_professores()
@@ -90,7 +90,7 @@ def buscar_professor_por_id(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         return professor_service.buscar_professor_por_id(
             id_professor=id_professor,
@@ -123,7 +123,7 @@ def atualizar_professor(
         obter_usuario_logado
     )
 ):
-    
+
     try:
         professor_service.atualizar_professor(
             id_professor=id_professor,
@@ -132,8 +132,7 @@ def atualizar_professor(
         )
 
         return {
-            "message": "Senha do professor atualizada "
-            "com sucesso"
+            "message": "Professor atualizado com sucesso"
         }
 
     except ValueError as e:
@@ -147,11 +146,19 @@ def atualizar_professor(
 
         if mensagem in (
             "Você só pode alterar o próprio cadastro",
-            "Você não tem permissão para alterar "
-            "este cadastro"
+            "Você não tem permissão para alterar este cadastro",
+            "Você não tem permissão para alterar estes campos"
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
+                detail=mensagem
+            )
+
+        if mensagem == (
+            "Este email já está cadastrado no Scripta"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
                 detail=mensagem
             )
 
@@ -171,7 +178,7 @@ def deletar_professor(
         obter_usuario_logado
     )
 ):
-    
+
     exigir_coordenador(usuario)
 
     try:

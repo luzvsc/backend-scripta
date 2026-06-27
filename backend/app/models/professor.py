@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Self
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -10,12 +11,13 @@ from pydantic import (
 
 
 class ProfessorBase(BaseModel):
-    
+
     nome: str = Field(
         ...,
         min_length=3,
         max_length=150
     )
+
     email: EmailStr
 
 
@@ -25,10 +27,12 @@ class ProfessorCreate(ProfessorBase):
         ...,
         min_length=6
     )
+
     confirmar_senha: str = Field(
         ...,
         min_length=6
     )
+
     area_atuacao: Optional[str] = Field(
         default=None,
         max_length=100
@@ -43,6 +47,7 @@ class ProfessorCreate(ProfessorBase):
         cls,
         email: str
     ) -> str:
+
         return str(email).strip().lower()
 
     @field_validator("email")
@@ -51,6 +56,7 @@ class ProfessorCreate(ProfessorBase):
         cls,
         email: EmailStr
     ) -> EmailStr:
+
         dominio = str(email).rsplit(
             "@",
             maxsplit=1
@@ -67,7 +73,8 @@ class ProfessorCreate(ProfessorBase):
     @model_validator(mode="after")
     def verificar_senhas(
         self
-    ) -> "ProfessorCreate":
+    ) -> Self:
+
         if self.senha != self.confirmar_senha:
             raise ValueError(
                 "A senha e a confirmação da senha "
@@ -78,18 +85,25 @@ class ProfessorCreate(ProfessorBase):
 
 
 class ProfessorResponse(ProfessorBase):
+
     id: int
+
     area_atuacao: Optional[str] = None
 
 
 class ProfessorOrientadorResponse(BaseModel):
+
     id: int
+
     nome: str
+
     area_atuacao: Optional[str] = None
 
 
 class ProfessorLogin(BaseModel):
+
     email: EmailStr
+
     senha: str = Field(
         ...,
         min_length=6
@@ -97,24 +111,81 @@ class ProfessorLogin(BaseModel):
 
 
 class ProfessorUpdate(BaseModel):
+
     model_config = ConfigDict(
         extra="forbid"
+    )
+
+    nome: Optional[str] = Field(
+        default=None,
+        min_length=3,
+        max_length=150
+    )
+
+    email: Optional[EmailStr] = None
+
+    area_atuacao: Optional[str] = Field(
+        default=None,
+        max_length=100
     )
 
     senha: Optional[str] = Field(
         default=None,
         min_length=6
     )
+
     confirmar_senha: Optional[str] = Field(
         default=None,
         min_length=6
     )
 
+    @field_validator(
+        "email",
+        mode="before"
+    )
+    @classmethod
+    def normalizar_email(
+        cls,
+        email: str | None
+    ) -> str | None:
+
+        if email is None:
+            return None
+
+        return str(email).strip().lower()
+
+    @field_validator("email")
+    @classmethod
+    def validar_email_institucional(
+        cls,
+        email: EmailStr | None
+    ) -> EmailStr | None:
+
+        if email is None:
+            return None
+
+        dominio = str(email).rsplit(
+            "@",
+            maxsplit=1
+        )[1]
+
+        if dominio != "edu.pe.senac.br":
+            raise ValueError(
+                "Utilize o email institucional do Senac "
+                "(@edu.pe.senac.br)"
+            )
+
+        return email
+
     @model_validator(mode="after")
     def verificar_nova_senha(
         self
-    ) -> "ProfessorUpdate":
-        senha_informada = self.senha is not None
+    ) -> Self:
+
+        senha_informada = (
+            self.senha is not None
+        )
+
         confirmacao_informada = (
             self.confirmar_senha is not None
         )
@@ -137,5 +208,7 @@ class ProfessorUpdate(BaseModel):
 
 
 class ProfessorCreateResponse(BaseModel):
+
     message: str
+
     id: int

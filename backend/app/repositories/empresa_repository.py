@@ -184,9 +184,11 @@ def listar_empresas() -> list[dict[str, Any]]:
 def atualizar_empresa(id_empresa: int, dados: dict[str, Any]) -> bool:
 
     campos_permitidos = {
-        "email_contato",
-        "setor",
-        "senha"
+    "nome_empresa",
+    "cnpj",
+    "email_contato",
+    "setor",
+    "senha"
     }
 
     campos: list[str] = []
