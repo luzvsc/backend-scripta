@@ -28,7 +28,14 @@ def adicionar_integrante(
         obter_usuario_logado
     )
 ):
-    exigir_aluno(usuario)
+
+    exigir_perfis(
+        usuario,
+        [
+            "aluno",
+            "coordenador"
+        ]
+    )
 
     try:
         integrante_service.adicionar_integrante(
@@ -54,8 +61,8 @@ def adicionar_integrante(
             )
 
         if mensagem == (
-            "Apenas o aluno responsável pode "
-            "adicionar integrantes ao projeto"
+            "Apenas o aluno responsável ou a "
+            "coordenação podem adicionar integrantes"
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

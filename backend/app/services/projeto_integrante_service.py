@@ -3,6 +3,7 @@ from app.models.projeto_integrante import (ProjetoIntegranteCreate)
 import app.repositories.aluno_repository as aluno_repository
 import app.repositories.projeto_repository as projeto_repository
 import app.repositories.projeto_integrante_repository as integrante_repository
+import app.services.logs_sistema_service as logs_sistema_service
 
 
 def _buscar_projeto(projeto_id: int) -> dict:
@@ -28,14 +29,20 @@ def _validar_projeto_em_rascunho(projeto: dict) -> None:
 
 def _validar_responsavel_para_adicao(projeto: dict, usuario: UsuarioAutenticado) -> None:
 
+    if usuario.perfil == "coordenador":
+        return
+
     if (
-        usuario.perfil != "aluno"
-        or projeto["aluno_responsavel_id"] != usuario.id
+        usuario.perfil == "aluno"
+        and projeto["aluno_responsavel_id"]
+        == usuario.id
     ):
-        raise ValueError(
-            "Apenas o aluno responsável pode "
-            "adicionar integrantes ao projeto"
-        )
+        return
+
+    raise ValueError(
+        "Apenas o aluno responsável ou a "
+        "coordenação podem adicionar integrantes"
+    )
 
 
 def _validar_permissao_para_remocao(projeto: dict, usuario: UsuarioAutenticado) -> None:
@@ -55,6 +62,14 @@ def _validar_permissao_para_remocao(projeto: dict, usuario: UsuarioAutenticado) 
     )
 
 
+def _validar_status_para_alterar_integrantes(projeto: dict, usuario: UsuarioAutenticado) -> None:
+
+    if usuario.perfil == "coordenador":
+        return
+
+    _validar_projeto_em_rascunho(projeto)
+
+
 def adicionar_integrante(projeto_id: int, integrante: ProjetoIntegranteCreate, usuario: UsuarioAutenticado) -> bool:
 
     projeto = _buscar_projeto(projeto_id)
@@ -64,7 +79,10 @@ def adicionar_integrante(projeto_id: int, integrante: ProjetoIntegranteCreate, u
         usuario
     )
 
-    _validar_projeto_em_rascunho(projeto)
+    _validar_status_para_alterar_integrantes(
+    projeto,
+    usuario
+    )
 
     aluno = aluno_repository.buscar_por_id(integrante.aluno_id)
 
@@ -101,6 +119,19 @@ def adicionar_integrante(projeto_id: int, integrante: ProjetoIntegranteCreate, u
     if not sucesso:
         raise ValueError(
             "Não foi possível adicionar o integrante"
+        )
+
+    if usuario.perfil == "coordenador":
+
+        logs_sistema_service.registrar_acao(
+            coordenador_id=usuario.id,
+            acao="CREATE",
+            entidade="projeto_integrantes",
+            registro_id=projeto_id,
+            detalhes=(
+                f"Aluno {integrante.aluno_id} "
+                f"adicionado ao projeto {projeto_id}"
+            )
         )
 
     return True
@@ -164,7 +195,10 @@ def remover_integrante(projeto_id: int, aluno_id: int, usuario: UsuarioAutentica
         usuario
     )
 
-    _validar_projeto_em_rascunho(projeto)
+    _validar_status_para_alterar_integrantes(
+    projeto,
+    usuario
+    )
 
     if projeto["aluno_responsavel_id"] == aluno_id:
         raise ValueError(
@@ -183,14 +217,29 @@ def remover_integrante(projeto_id: int, aluno_id: int, usuario: UsuarioAutentica
             "O aluno não faz parte deste projeto"
         )
 
-    sucesso = integrante_repository.remover_integrante(
+    sucesso = (
+    integrante_repository.remover_integrante(
         projeto_id=projeto_id,
         aluno_id=aluno_id
     )
+)
 
     if not sucesso:
         raise ValueError(
             "Não foi possível remover o integrante"
+        )
+
+    if usuario.perfil == "coordenador":
+
+        logs_sistema_service.registrar_acao(
+            coordenador_id=usuario.id,
+            acao="DELETE",
+            entidade="projeto_integrantes",
+            registro_id=projeto_id,
+            detalhes=(
+                f"Aluno {aluno_id} removido "
+                f"do projeto {projeto_id}"
+            )
         )
 
     return True
