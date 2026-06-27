@@ -200,3 +200,8 @@ def deletar_portfolio(id_portfolio: int, aluno_id: int) -> bool:
         )
 
     return True
+
+
+def listar_portfolios_publicos() -> list[dict]:
+
+    return portfolio_repository.listar_publicos()

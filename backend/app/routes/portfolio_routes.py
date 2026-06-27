@@ -120,6 +120,37 @@ def listar_portfolios_do_aluno(
 
 
 @router.get(
+    "/publicos",
+    response_model=list[PortfolioResponse],
+    status_code=status.HTTP_200_OK,
+    responses={
+        403: {
+            "description": "Acesso negado"
+        }
+    }
+)
+def listar_portfolios_publicos(
+    usuario: UsuarioAutenticado = Depends(
+        obter_usuario_logado
+    )
+):
+
+    if usuario.perfil != "empresa":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Apenas empresas podem acessar "
+                "os portfólios públicos"
+            )
+        )
+
+    return (
+        portfolio_service
+        .listar_portfolios_publicos()
+    )
+
+
+@router.get(
     "/{id_portfolio}",
     response_model=PortfolioResponse,
     status_code=status.HTTP_200_OK

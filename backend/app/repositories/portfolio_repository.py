@@ -250,3 +250,44 @@ def deletar_portfolio(id_portfolio: int) -> bool:
 
         if conn:
             conn.close()
+
+
+def listar_publicos() -> list[dict[str, Any]]:
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                pf.id,
+                pf.aluno_id,
+                pf.projeto_id,
+                pf.visibilidade,
+                a.nome AS nome_aluno,
+                p.titulo AS titulo_projeto,
+                p.curso,
+                p.semestre
+            FROM portfolios pf
+            JOIN alunos a
+                ON a.id = pf.aluno_id
+            JOIN projetos p
+                ON p.id = pf.projeto_id
+            WHERE pf.visibilidade = 'publico'
+              AND p.status = 'aprovado'
+            ORDER BY pf.id DESC
+            """
+        )
+
+        return list(cursor.fetchall())
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
