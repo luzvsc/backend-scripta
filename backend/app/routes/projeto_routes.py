@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List
-
+from typing import List, Literal
 from app.models.projeto import (
     ProjetoCreate,
     ProjetoCreateResponse,
@@ -9,14 +8,18 @@ from app.models.projeto import (
     ProjetoUpdate,
     ProjetoStatusUpdate
 )
-
 import app.services.projeto_service as projeto_service
-from app.core.auth_core import obter_usuario_logado, exigir_aluno, exigir_coordenador
+from app.core.auth_core import obter_usuario_logado, exigir_aluno, exigir_coordenador, exigir_perfis
 from app.models.auth import UsuarioAutenticado
 
 
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
+
+PerfilEditorProjeto = Literal[
+    "aluno",
+    "coordenador"
+]
 
 
 @router.post(
@@ -113,7 +116,10 @@ def buscar_projeto_por_id(
         )
 
 
-@router.put("/{id_projeto}", responses={404: {"description": "Projeto não encontrado"}})
+@router.put(
+    "/{id_projeto}",
+    status_code=status.HTTP_200_OK
+)
 def atualizar_projeto(
     id_projeto: int,
     projeto: ProjetoUpdate,
@@ -121,34 +127,66 @@ def atualizar_projeto(
         obter_usuario_logado
     )
 ):
-    exigir_aluno(usuario)
+
+    exigir_perfis(
+        usuario,
+        [
+            "aluno",
+            "coordenador"
+        ]
+    )
+
+    if usuario.perfil not in (
+        "aluno",
+        "coordenador"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Apenas alunos e coordenadores "
+                "podem editar projetos"
+            )
+        )
+
+    perfil_editor: PerfilEditorProjeto = (
+        usuario.perfil
+    )
 
     try:
         projeto_service.atualizar_projeto(
             id_projeto=id_projeto,
             projeto=projeto,
             quem_alterou_id=usuario.id,
-            quem_alterou_tipo="aluno"
+            quem_alterou_tipo=perfil_editor
         )
 
         return {
-            "message": "Projeto atualizado com sucesso"
+            "message": (
+                "Projeto atualizado com sucesso"
+            )
         }
 
     except ValueError as e:
         mensagem = str(e)
 
-        if mensagem == "Projeto não encontrado":
+        if mensagem in (
+            "Projeto não encontrado",
+            "Professor orientador não encontrado"
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=mensagem
             )
-        
-        if mensagem == "Você não faz parte deste projeto":
+
+        if mensagem in (
+            "Você não faz parte deste projeto",
+            "Você não tem permissão para "
+            "editar este projeto"
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=mensagem
-                )
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -176,7 +214,7 @@ def atualizar_status_projeto(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Apenas alunos e coordenadores podem alterar status"
         )
-    
+
     try:
         projeto_service.atualizar_status_projeto(
             id_projeto=id_projeto,
@@ -197,7 +235,7 @@ def atualizar_status_projeto(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=mensagem
             )
-        
+
         if mensagem == "Você não faz parte deste projeto":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -218,7 +256,7 @@ def deletar_projeto(
     )
 ):
     exigir_coordenador(usuario)
-    
+
     try:
         projeto_service.deletar_projeto(
             id_projeto=id_projeto,
@@ -232,12 +270,12 @@ def deletar_projeto(
     except ValueError as e:
         mensagem = str(e)
 
-        if mensagem == "Projeto nao encontrado":
+        if mensagem == "Projeto não encontrado":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=mensagem
             )
-        
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=mensagem

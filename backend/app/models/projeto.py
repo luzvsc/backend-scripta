@@ -33,12 +33,39 @@ class ProjetoResponse(ProjetoBase):
 
 
 class ProjetoUpdate(BaseModel):
-    titulo: Optional[str] = Field(None, min_length=3, max_length=150)
-    descricao: Optional[str] = Field(None, min_length=10)
-    curso: Optional[str] = Field(None, min_length=2, max_length=100)
-    turma: Optional[str] = Field(None, min_length=1, max_length=50)
-    semestre: Optional[str] = Field(None, min_length=1, max_length=10)
-    area_conhecimento: Optional[str] = Field(None, min_length=3, max_length=150)
+    titulo: Optional[str] = Field(
+        None,
+        min_length=3,
+        max_length=150
+    )
+    descricao: Optional[str] = Field(
+        None,
+        min_length=10
+    )
+    curso: Optional[str] = Field(
+        None,
+        min_length=2,
+        max_length=100
+    )
+    turma: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=50
+    )
+    semestre: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=10
+    )
+    area_conhecimento: Optional[str] = Field(
+        None,
+        min_length=3,
+        max_length=150
+    )
+    professor_orientador_id: Optional[int] = Field(
+        None,
+        ge=1
+    )
 
 
 class ProjetoStatusUpdate(BaseModel):

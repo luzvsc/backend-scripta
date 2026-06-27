@@ -14,7 +14,7 @@ from app.models.versao_projeto import VersaoProjetoCreate
 import app.services.logs_sistema_service as logs_sistema_service
 from typing import Literal
 
-PerfilAlterador = Literal[ "aluno", "professor", "coordenador" ]
+PerfilEditorProjeto = Literal[ "aluno", "coordenador" ]
 
 PerfilAutenticado = Literal[ "aluno", "professor", "coordenador", "empresa" ]
 
@@ -110,10 +110,13 @@ def atualizar_projeto(
     id_projeto: int,
     projeto: ProjetoUpdate,
     quem_alterou_id: int,
-    quem_alterou_tipo: PerfilAlterador
+    quem_alterou_tipo: PerfilEditorProjeto
 ) -> bool:
-    projeto_existente = projeto_repository.buscar_por_id(
-        id_projeto
+
+    projeto_existente = (
+        projeto_repository.buscar_por_id(
+            id_projeto
+        )
     )
 
     if not projeto_existente:
@@ -121,55 +124,89 @@ def atualizar_projeto(
             "Projeto não encontrado"
         )
 
-    integrante = (
-        integrante_repository.buscar_por_projeto_e_aluno(
-            projeto_id=id_projeto,
-            aluno_id=quem_alterou_id
-        )
-    )
+    if quem_alterou_tipo == "aluno":
 
-    if not integrante:
+        integrante = (
+            integrante_repository
+            .buscar_por_projeto_e_aluno(
+                projeto_id=id_projeto,
+                aluno_id=quem_alterou_id
+            )
+        )
+
+        if not integrante:
+            raise ValueError(
+                "Você não faz parte deste projeto"
+            )
+
+        if projeto_existente["status"] in (
+            "em_avaliacao",
+            "aprovado",
+            "reprovado"
+        ):
+            raise ValueError(
+                "Este projeto não pode mais ser editado pelo aluno"
+            )
+
+    elif quem_alterou_tipo != "coordenador":
         raise ValueError(
-            "Você não faz parte deste projeto"
+            "Você não tem permissão para editar este projeto"
         )
 
-    status_atual = projeto_existente["status"]
-
-    if status_atual in (
-        "em_avaliacao",
-        "aprovado",
-        "reprovado"
-    ):
-        raise ValueError(
-            "Este projeto não pode mais ser editado"
-        )
-
-    dados = projeto.model_dump(
+    dados_recebidos = projeto.model_dump(
         exclude_unset=True
     )
 
-    if not dados:
+    if not dados_recebidos:
         raise ValueError(
             "Nenhum dado informado para atualização"
         )
 
-    titulo = dados.get(
+    dados_alterados = {
+        campo: valor
+        for campo, valor in dados_recebidos.items()
+        if valor != projeto_existente.get(campo)
+    }
+
+    if not dados_alterados:
+        raise ValueError(
+            "Nenhuma alteração identificada"
+        )
+
+    titulo = dados_alterados.get(
         "titulo",
         projeto_existente["titulo"]
     )
 
-    turma = dados.get(
+    turma = dados_alterados.get(
         "turma",
         projeto_existente["turma"]
     )
 
-    semestre = dados.get(
+    semestre = dados_alterados.get(
         "semestre",
         projeto_existente["semestre"]
     )
 
+    novo_professor_id = dados_alterados.get(
+    "professor_orientador_id"
+)
+
+    if novo_professor_id is not None:
+        professor = (
+            professor_repository.buscar_por_id(
+                novo_professor_id
+            )
+        )
+
+        if not professor:
+            raise ValueError(
+                "Professor orientador não encontrado"
+            )
+
     projeto_duplicado = (
-        projeto_repository.buscar_por_titulo_turma_semestre(
+        projeto_repository
+        .buscar_por_titulo_turma_semestre(
             titulo,
             turma,
             semestre
@@ -185,7 +222,7 @@ def atualizar_projeto(
             "nesta turma e semestre"
         )
 
-    if status_atual == "submetido":
+    if projeto_existente["status"] == "submetido":
         versao_projeto_service.criar_versao(
             VersaoProjetoCreate(
                 projeto_id=id_projeto,
@@ -194,11 +231,36 @@ def atualizar_projeto(
             )
         )
 
-    return projeto_repository.atualizar_projeto(
-        id_projeto,
-        dados
+    resultado = (
+        projeto_repository.atualizar_projeto(
+            id_projeto,
+            dados_alterados
+        )
     )
 
+    if not resultado:
+        raise ValueError(
+            "Não foi possível atualizar o projeto"
+        )
+
+    if quem_alterou_tipo == "coordenador":
+
+        campos_alterados = ", ".join(
+            dados_alterados.keys()
+        )
+
+        logs_sistema_service.registrar_acao(
+            coordenador_id=quem_alterou_id,
+            acao="UPDATE",
+            entidade="projetos",
+            registro_id=id_projeto,
+            detalhes=(
+                "Metadados do projeto atualizados. "
+                f"Campos alterados: {campos_alterados}"
+            )
+        )
+
+    return True
 
 
 def atualizar_status_projeto(
@@ -330,14 +392,9 @@ usuario_perfil: PerfilAutenticado | None = None
     return resultado
 
 
+def deletar_projeto(id_projeto: int, coordenador_id: int) -> bool:
 
-def deletar_projeto(
-    id_projeto: int,
-    coordenador_id: int
-) -> bool:
-    projeto = projeto_repository.buscar_por_id(
-        id_projeto
-    )
+    projeto = projeto_repository.buscar_por_id(id_projeto)
 
     if not projeto:
         raise ValueError(
@@ -355,16 +412,21 @@ def deletar_projeto(
             "Este projeto não pode ser removido"
         )
 
-    resultado = projeto_repository.deletar_projeto(
-        id_projeto
-    )
+    resultado = projeto_repository.deletar_projeto(id_projeto)
+
+    if not resultado:
+        raise ValueError(
+            "Não foi possível remover o projeto"
+        )
 
     logs_sistema_service.registrar_acao(
         coordenador_id=coordenador_id,
         acao="DELETE",
         entidade="projetos",
         registro_id=id_projeto,
-        detalhes="Projeto removido"
+        detalhes=(
+            f"Projeto '{projeto['titulo']}' removido"
+        )
     )
 
-    return resultado
+    return True
