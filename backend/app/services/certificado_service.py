@@ -20,20 +20,32 @@ def emitir_certificados_por_projeto(projeto_id: int, coordenador_id: int) -> lis
             "para projetos aprovados"
         )
 
-    integrantes = integrante_repository.listar_integrantes(projeto_id)
+    integrantes = (
+        integrante_repository
+        .listar_integrantes(projeto_id)
+    )
 
-    if not integrantes:
-        raise ValueError(
-            "Nenhum integrante encontrado para este projeto"
+    alunos_ids = {
+        int(
+            projeto[
+                "aluno_responsavel_id"
+            ]
         )
+    }
+
+    alunos_ids.update(
+        int(integrante["aluno_id"])
+        for integrante in integrantes
+        if integrante.get("aluno_id")
+        is not None
+    )
 
     ids_gerados: list[int] = []
 
-    for integrante in integrantes:
-        aluno_id = integrante["aluno_id"]
-
+    for aluno_id in alunos_ids:
         certificado_existente = (
-            certificado_repository.certificado_ja_existe(
+            certificado_repository
+            .certificado_ja_existe(
                 id_projeto=projeto_id,
                 id_aluno=aluno_id
             )
@@ -43,13 +55,16 @@ def emitir_certificados_por_projeto(projeto_id: int, coordenador_id: int) -> lis
             continue
 
         id_certificado = (
-            certificado_repository.criar_certificado(
+            certificado_repository
+            .criar_certificado(
                 projeto_id=projeto_id,
                 aluno_id=aluno_id
             )
         )
 
-        ids_gerados.append(id_certificado)
+        ids_gerados.append(
+            id_certificado
+        )
 
         logs_sistema_service.registrar_acao(
             coordenador_id=coordenador_id,
@@ -57,14 +72,10 @@ def emitir_certificados_por_projeto(projeto_id: int, coordenador_id: int) -> lis
             entidade="certificados",
             registro_id=id_certificado,
             detalhes=(
-                f"Certificado emitido para o aluno "
-                f"{aluno_id} no projeto {projeto_id}"
+                "Certificado emitido para "
+                f"o aluno {aluno_id} no "
+                f"projeto {projeto_id}"
             )
-        )
-
-    if not ids_gerados:
-        raise ValueError(
-            "Todos os integrantes já possuem certificado"
         )
 
     return ids_gerados

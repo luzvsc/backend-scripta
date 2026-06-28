@@ -24,7 +24,7 @@ router = APIRouter(prefix="/certificados", tags=["Certificados"])
 @router.post(
     "/emitir",
     response_model=CertificadoCreateResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_200_OK
 )
 def emitir_certificados(
     payload: CertificadoEmitirRequest,
@@ -32,37 +32,44 @@ def emitir_certificados(
         obter_usuario_logado
     )
 ):
+
     exigir_coordenador(usuario)
 
     try:
         ids = (
-            certificado_service.emitir_certificados_por_projeto(
+            certificado_service
+            .emitir_certificados_por_projeto(
                 projeto_id=payload.projeto_id,
                 coordenador_id=usuario.id
             )
         )
 
+        mensagem = (
+            "Certificados emitidos com sucesso"
+            if ids
+            else (
+                "Todos os alunos deste projeto "
+                "já possuem certificado"
+            )
+        )
+
         return {
-            "message": "Certificados emitidos com sucesso",
+            "message": mensagem,
             "ids_certificados": ids
         }
 
     except ValueError as e:
         mensagem = str(e)
 
-        if mensagem in (
-            "Projeto não encontrado",
-            "Nenhum integrante encontrado para este projeto"
-        ):
+        if mensagem == "Projeto não encontrado":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=mensagem
             )
 
-        if mensagem in (
+        if mensagem == (
             "Certificados só podem ser emitidos "
-            "para projetos aprovados",
-            "Todos os integrantes já possuem certificado"
+            "para projetos aprovados"
         ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

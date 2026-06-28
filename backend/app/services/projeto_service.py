@@ -13,10 +13,15 @@ from app.services import versao_projeto_service
 from app.models.versao_projeto import VersaoProjetoCreate
 import app.services.logs_sistema_service as logs_sistema_service
 from typing import Literal
+import logging
+import app.services.certificado_service as certificado_service
+
 
 PerfilEditorProjeto = Literal[ "aluno", "coordenador" ]
 
 PerfilAutenticado = Literal[ "aluno", "professor", "coordenador", "empresa" ]
+
+logger = logging.getLogger(__name__)
 
 def cadastrar_projeto(
     projeto: ProjetoCreate,
@@ -269,9 +274,8 @@ status_update: ProjetoStatusUpdate,
 usuario_id: int | None = None,
 usuario_perfil: PerfilAutenticado | None = None
 ) -> bool:
-    projeto = projeto_repository.buscar_por_id(
-    id_projeto
-    )
+
+    projeto = projeto_repository.buscar_por_id(id_projeto)
 
     if not projeto:
         raise ValueError(
@@ -388,6 +392,28 @@ usuario_perfil: PerfilAutenticado | None = None
                 f"para '{novo_status}'"
             )
         )
+
+        if (
+        resultado
+        and novo_status == "aprovado"
+        and coordenador_id is not None
+        ):
+            try:
+                (
+                    certificado_service
+                    .emitir_certificados_por_projeto(
+                        projeto_id=id_projeto,
+                        coordenador_id=coordenador_id
+                    )
+                )
+
+            except Exception:
+                logger.exception(
+                    "O projeto %s foi aprovado, "
+                    "mas não foi possível emitir "
+                    "automaticamente os certificados.",
+                    id_projeto
+                )
 
     return resultado
 
