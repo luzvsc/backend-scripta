@@ -260,27 +260,19 @@ def listar_projetos_por_perfil(usuario_id: int, perfil: str) -> list[dict]:
                     ON p.aluno_responsavel_id = a.id
                 JOIN professores prof
                     ON p.professor_orientador_id = prof.id
-                WHERE EXISTS (
-                    SELECT 1
-                    FROM projeto_integrantes pi
-                    WHERE pi.projeto_id = p.id
-                      AND pi.aluno_id = %s
-                )
-                OR (
-                    p.status = 'aprovado'
-                    AND EXISTS (
+                WHERE p.aluno_responsavel_id = %s
+                   OR EXISTS (
                         SELECT 1
-                        FROM portfolios pf
-                        WHERE pf.projeto_id = p.id
-                        AND pf.visibilidade IN (
-                            'publico',
-                            'apenas_senac'
-                        )
-                    )
-                )
+                        FROM projeto_integrantes pi
+                        WHERE pi.projeto_id = p.id
+                          AND pi.aluno_id = %s
+                   )
                 ORDER BY p.id DESC
                 """,
-                (usuario_id,)
+                (
+                    usuario_id,
+                    usuario_id
+                )
             )
 
         else:
